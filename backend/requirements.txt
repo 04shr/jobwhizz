@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pymysql
+python-dotenv
+groq
+pdfplumber
+apscheduler
+requests
+cryptography

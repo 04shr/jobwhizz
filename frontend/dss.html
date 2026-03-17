@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JobWhiz Lab · Decision Support System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#08070a;--surface:#0f0e13;--surface2:#141219;--border:#1c1a24;--border2:#262333;
+  --gold:#f5c518;--gold2:#e8a000;--amber:#ffb340;--green:#00e5a0;
+  --accent2:#4f8bff;--danger:#ff4f6b;--purple:#b57bee;
+  --text:#ede8f0;--muted:#decec1;--muted2:#2a2535;
+  --font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;--font-body:'Instrument Sans',sans-serif;
+  --r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.02;pointer-events:none;z-index:0;}
+/* subtle diagonal lines bg */
+body::after{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(45deg,rgba(245,197,24,.012) 0px,rgba(245,197,24,.012) 1px,transparent 1px,transparent 12px);pointer-events:none;z-index:0;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2.5rem;height:60px;background:rgba(8,7,10,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:var(--font-head);font-weight:800;font-size:1.05rem;color:var(--gold);letter-spacing:-.02em;text-decoration:none;}
+.nav-logo span{color:var(--text);}
+.nav-links{display:flex;gap:.2rem;list-style:none;}
+.nav-links a{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);text-decoration:none;padding:.38rem .8rem;border-radius:6px;border:1px solid transparent;transition:all .18s;cursor:pointer;}
+.nav-links a:hover,.nav-links a.active{color:var(--gold);border-color:rgba(245,197,24,.3);background:rgba(245,197,24,.05);}
+.api-pill{display:flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.65rem;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.api-dot.live{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── LAYOUT ── */
+main{padding-top:60px;position:relative;z-index:1;}
+.page-header{padding:3.5rem 2.5rem 0;max-width:1200px;margin:0 auto;}
+.page-tag{font-family:var(--font-mono);font-size:.65rem;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+.page-tag::before{content:'';display:block;width:20px;height:1px;background:var(--gold);}
+.page-header h1{font-family:var(--font-head);font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.75rem;}
+.page-header h1 em{font-style:normal;color:var(--gold);}
+.page-header p{font-size:.9rem;color:var(--muted);max-width:600px;line-height:1.75;}
+
+/* ── MARKET PULSE STRIP ── */
+.pulse-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:2rem 2.5rem 0;max-width:1200px;margin-left:auto;margin-right:auto;}
+.pulse-cell{background:var(--surface);padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;}
+.pulse-icon{font-size:1.2rem;flex-shrink:0;}
+.pulse-val{font-family:var(--font-head);font-size:1.3rem;font-weight:800;color:var(--gold);letter-spacing:-.03em;line-height:1;}
+.pulse-label{font-family:var(--font-mono);font-size:.58rem;color:var(--muted);margin-top:.2rem;text-transform:uppercase;letter-spacing:.04em;}
+
+/* ── SECTION ── */
+.section{max-width:1200px;margin:0 auto;padding:2.5rem 2.5rem 0;}
+.section-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.section-num{font-family:var(--font-mono);font-size:.62rem;color:var(--muted2);margin-right:.25rem;}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;}
+.card-title{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.25rem;}
+
+/* ── PROFILE FORM ── */
+.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+@media(max-width:800px){.profile-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:500px){.profile-grid{grid-template-columns:1fr;}}
+.field{margin-bottom:0;}
+.field label{display:block;font-family:var(--font-mono);font-size:.63rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.45rem;}
+.field select,.field input[type=text],.field input[type=range]{width:100%;background:#0a090d;border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--font-mono);font-size:.78rem;outline:none;transition:border-color .2s;appearance:none;}
+.field select:focus,.field input[type=text]:focus{border-color:var(--gold);}
+.field input[type=range]{padding:.3rem 0;background:transparent;border:none;accent-color:var(--gold);}
+.skills-input{grid-column:1/-1;}
+.analyse-btn{width:100%;padding:.9rem;font-family:var(--font-head);font-size:1rem;font-weight:700;background:var(--gold);color:#000;border:none;border-radius:8px;cursor:pointer;transition:all .2s;margin-top:1.25rem;letter-spacing:.01em;}
+.analyse-btn:hover{background:#ffe040;transform:translateY(-2px);box-shadow:0 8px 24px rgba(245,197,24,.25);}
+.analyse-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* ── GAP ANALYSIS RESULTS ── */
+.gap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1rem;}
+.gap-cell{background:var(--surface2);padding:1.25rem 1rem;text-align:center;}
+.gap-val{font-family:var(--font-head);font-size:1.8rem;font-weight:800;letter-spacing:-.04em;line-height:1;}
+.gap-label{font-family:var(--font-mono);font-size:.58rem;color:var(--muted);margin-top:.3rem;text-transform:uppercase;letter-spacing:.04em;}
+.gap-sub{font-size:.7rem;color:var(--muted);margin-top:.35rem;line-height:1.4;}
+.gold{color:var(--gold);}
+.green{color:var(--green);}
+.red{color:var(--danger);}
+.amber{color:var(--amber);}
+
+/* ── SKILL CHIPS ── */
+.chip-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem;}
+.chip{font-family:var(--font-mono);font-size:.65rem;padding:.28rem .7rem;border-radius:999px;display:inline-flex;align-items:center;gap:.3rem;}
+.chip-match{background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);color:var(--green);}
+.chip-miss{background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);color:var(--gold);}
+
+/* ── ROI TABLE ── */
+.roi-row{display:grid;grid-template-columns:130px 1fr 80px 80px 80px;align-items:center;gap:.75rem;padding:.65rem 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:.72rem;}
+.roi-row:last-child{border-bottom:none;}
+.roi-row.header{font-size:.6rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding-bottom:.75rem;}
+.roi-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.roi-bar-fill{height:100%;border-radius:3px;background:var(--gold);transition:width 1s ease;}
+.roi-rank{font-family:var(--font-head);font-size:.8rem;font-weight:700;color:var(--gold);}
+
+/* ── CAREER PATHS ── */
+.paths-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;}
+.path-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;position:relative;transition:all .2s;cursor:default;}
+.path-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.path-card.best{border-color:rgba(245,197,24,.35);background:rgba(245,197,24,.03);}
+.best-badge{position:absolute;top:1rem;right:1rem;font-family:var(--font-mono);font-size:.58rem;padding:.18rem .55rem;border-radius:4px;background:rgba(245,197,24,.15);color:var(--gold);border:1px solid rgba(245,197,24,.3);}
+.path-role{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:.5rem;}
+.path-salary{font-family:var(--font-head);font-size:1.8rem;font-weight:800;color:var(--gold);letter-spacing:-.03em;line-height:1;}
+.path-jump{font-family:var(--font-mono);font-size:.7rem;color:var(--green);margin-left:.5rem;}
+.path-meta{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem;}
+.path-tag{font-family:var(--font-mono);font-size:.6rem;padding:.18rem .55rem;border-radius:4px;background:rgba(79,139,255,.08);color:var(--accent2);border:1px solid rgba(79,139,255,.15);}
+.path-tag.warn{background:rgba(255,179,64,.08);color:var(--amber);border-color:rgba(255,179,64,.15);}
+.path-skills{margin-top:1rem;}
+.path-skills-label{font-family:var(--font-mono);font-size:.58rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem;}
+
+/* ── ACTION PLAN ── */
+.plan-header{background:rgba(245,197,24,.05);border:1px solid rgba(245,197,24,.2);border-radius:var(--r);padding:1.25rem;margin-bottom:1.25rem;}
+.plan-goal{font-family:var(--font-head);font-size:1.05rem;font-weight:700;color:var(--gold);line-height:1.4;}
+.month-block{margin-bottom:1.25rem;}
+.month-header{font-family:var(--font-mono);font-size:.65rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;padding:.5rem 0;border-bottom:1px solid var(--border);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem;}
+.month-header::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;}
+.week-row{display:grid;grid-template-columns:60px 1fr 1fr 1fr;gap:.75rem;padding:.65rem 0;border-bottom:1px solid rgba(28,26,36,.7);font-size:.8rem;align-items:start;}
+.week-row:last-child{border-bottom:none;}
+.week-num{font-family:var(--font-mono);font-size:.65rem;color:var(--gold);font-weight:600;}
+.week-cell{color:var(--muted);line-height:1.5;}
+.week-cell strong{color:var(--text);display:block;margin-bottom:.1rem;font-size:.78rem;}
+.week-header{font-family:var(--font-mono);font-size:.58rem;color:var(--muted2);letter-spacing:.06em;text-transform:uppercase;}
+.quick-wins{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.75rem;margin-bottom:1.25rem;}
+.qw-item{background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.15);border-radius:8px;padding:.85rem 1rem;font-size:.82rem;color:var(--muted);line-height:1.5;display:flex;gap:.65rem;}
+.qw-icon{color:var(--green);flex-shrink:0;font-size:1rem;}
+.success-grid{display:flex;gap:.65rem;flex-wrap:wrap;}
+.success-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;font-family:var(--font-mono);font-size:.7rem;color:var(--muted);display:flex;align-items:center;gap:.5rem;}
+.success-item::before{content:'✓';color:var(--gold);}
+
+/* ── LOADING ── */
+.loading-state{text-align:center;padding:3rem;}
+.loading-ring{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);}
+.hidden{display:none;}
+
+/* ── ANALYST NOTE ── */
+.analyst-note{background:rgba(245,197,24,.04);border:1px solid rgba(245,197,24,.12);border-left:3px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:1rem 1.25rem;margin-top:1.25rem;font-size:.8rem;line-height:1.75;color:var(--muted);}
+.analyst-note strong{color:var(--text);}
+.analyst-note .tag{display:inline-block;font-family:var(--font-mono);font-size:.6rem;padding:.15rem .5rem;border-radius:4px;background:rgba(245,197,24,.1);color:var(--gold);border:1px solid rgba(245,197,24,.2);margin-right:.4rem;}
+
+/* ── GRIDS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:700px){.grid-2{grid-template-columns:1fr;}}
+
+/* ── MISC ── */
+.section-divider{height:1px;background:var(--border);max-width:1200px;margin:2.5rem auto 0;}
+footer{border-top:1px solid var(--border);padding:1.5rem 2.5rem;margin-top:4rem;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem;position:relative;z-index:1;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:slideUp .5s ease forwards;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">◈ Job<span>Whiz</span> Lab</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="index.html">Dashboard</a></li>
+    <li><a href="eda.html">EDA</a></li>
+    <li><a href="nlp.html">NLP</a></li>
+    <li><a href="sml.html">SML</a></li>
+    <li><a class="active">DSS</a></li>
+  </ul>
+  <div class="api-pill">
+    <div class="api-dot" id="apiDot"></div>
+    <span id="apiLabel">Connecting...</span>
+  </div>
+</nav>
+
+<main>
+
+<!-- ── PAGE HEADER ── -->
+<div class="page-header anim" style="animation-delay:.05s">
+  <div class="page-tag">04 · Predictive Analytics</div>
+  <h1>What should<br/>you <em>do next</em>?</h1>
+  <p>Personalised career intelligence derived from real job listings. Tell us where you are — we'll show you exactly where to go, what to learn, and how to get there in 90 days.</p>
+</div>
+
+<!-- ── MARKET PULSE ── -->
+<div class="pulse-strip anim" style="animation-delay:.1s" id="pulse-strip">
+  <div class="pulse-cell"><div class="pulse-icon">📊</div><div><div class="pulse-val" id="p-jobs">—</div><div class="pulse-label">Live Jobs</div></div></div>
+  <div class="pulse-cell"><div class="pulse-icon">💰</div><div><div class="pulse-val" id="p-sal">—</div><div class="pulse-label">Avg Salary</div></div></div>
+  <div class="pulse-cell"><div class="pulse-icon">🏢</div><div><div class="pulse-val" id="p-comp">—</div><div class="pulse-label">Companies</div></div></div>
+  <div class="pulse-cell"><div class="pulse-icon">🔥</div><div><div class="pulse-val" id="p-role" style="font-size:.85rem">—</div><div class="pulse-label">Hottest Role</div></div></div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 1 — PROFILE INPUT
+════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.12s">
+  <div class="section-label"><span class="section-num">01</span> Your Profile</div>
+
+  <div class="card">
+    <div class="card-title">Tell us where you are right now</div>
+    <div class="profile-grid">
+      <div class="field">
+        <label>Current Role</label>
+        <select id="f-current">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Target Role</label>
+        <select id="f-target">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>City</label>
+        <select id="f-city">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Experience: <span id="exp-lbl">2</span> years</label>
+        <input type="range" id="f-exp" min="0" max="12" value="2"
+               oninput="document.getElementById('exp-lbl').textContent=this.value"/>
+      </div>
+      <div class="field skills-input" style="grid-column:span 2">
+        <label>Your Current Skills (comma separated)</label>
+        <input type="text" id="f-skills" placeholder="e.g. Python, SQL, Power BI, Excel, Tableau"/>
+      </div>
+    </div>
+    <button class="analyse-btn" id="analyseBtn" onclick="runAnalysis()">
+      ⚡ Analyse My Career Gap
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 2 — GAP ANALYSIS
+════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.15s">
+  <div class="section-label"><span class="section-num">02</span> Career Gap Analysis</div>
+
+  <div id="gap-loading" class="loading-state hidden">
+    <div class="loading-ring"></div>
+    <div class="loading-text">Analysing your gap against market data...</div>
+  </div>
+
+  <div id="gap-placeholder" class="card" style="text-align:center;padding:3rem;color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">
+    ↑ Fill your profile above and click Analyse
+  </div>
+
+  <div id="gap-results" class="hidden">
+    <div class="gap-grid" id="gap-kpis"></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">✅ Skills You Already Have</div>
+        <div class="chip-row" id="matched-chips"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚠️ Skills You Need to Add</div>
+        <div class="chip-row" id="missing-chips"></div>
+      </div>
+    </div>
+    <div class="analyst-note" id="gap-note"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 3 — SKILL ROI
+════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.18s">
+  <div class="section-label"><span class="section-num">03</span> Skill ROI — What to Learn Next</div>
+
+  <div id="roi-loading" class="loading-state hidden">
+    <div class="loading-ring"></div>
+    <div class="loading-text">Calculating skill return on investment...</div>
+  </div>
+
+  <div id="roi-placeholder" class="card" style="text-align:center;padding:3rem;color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">
+    ↑ Run analysis first
+  </div>
+
+  <div id="roi-results" class="card hidden">
+    <div class="card-title">Ranked by salary premium ÷ weeks to learn</div>
+    <div class="roi-row header">
+      <span>Skill</span><span>Salary Lift</span>
+      <span style="text-align:right">Premium</span>
+      <span style="text-align:right">Weeks</span>
+      <span style="text-align:right">ROI</span>
+    </div>
+    <div id="roi-rows"></div>
+  </div>
+
+  <div class="analyst-note" style="margin-top:1rem;">
+    <span class="tag">How ROI is calculated</span>
+    <strong>ROI Score = Annual Salary Premium ÷ (Weeks to Learn / 52).</strong> A skill that adds ₹1.8L and takes 4 weeks scores higher than one that adds ₹2L but takes 16 weeks. This is the same logic a product manager uses for feature prioritisation — impact divided by effort.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 4 — CAREER PATHS
+════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.2s">
+  <div class="section-label"><span class="section-num">04</span> Career Path Navigator</div>
+
+  <div id="paths-loading" class="loading-state hidden">
+    <div class="loading-ring"></div>
+    <div class="loading-text">Mapping your career paths...</div>
+  </div>
+
+  <div id="paths-placeholder" class="card" style="text-align:center;padding:3rem;color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">
+    ↑ Run analysis first
+  </div>
+
+  <div id="paths-results" class="hidden">
+    <div class="paths-grid" id="paths-grid"></div>
+  </div>
+
+  <div class="analyst-note" style="margin-top:1rem;">
+    <span class="tag">Prescriptive Logic</span>
+    <strong>These paths are ranked by salary jump, not difficulty.</strong> The hardest path often has the highest return — that's the data saying. Choose based on your risk appetite and timeline. The jobs_available count is pulled live from your database filtered to your city.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION 5 — 90-DAY ACTION PLAN
+════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.22s;padding-bottom:3rem;">
+  <div class="section-label"><span class="section-num">05</span> 90-Day Action Plan — Powered by Groq AI</div>
+
+  <div id="plan-loading" class="loading-state hidden">
+    <div class="loading-ring" style="border-top-color:var(--gold)"></div>
+    <div class="loading-text">Groq is building your personalised plan...</div>
+    <div style="font-family:var(--font-mono);font-size:.68rem;color:var(--muted2);margin-top:.4rem;">Using your gap analysis + skill ROI + market data</div>
+  </div>
+
+  <div id="plan-placeholder" class="card" style="text-align:center;padding:3rem;color:var(--muted);font-family:var(--font-mono);font-size:.75rem;">
+    ↑ Run analysis first — plan generates automatically
+  </div>
+
+  <div id="plan-results" class="hidden">
+    <!-- goal -->
+    <div class="plan-header">
+      <div style="font-family:var(--font-mono);font-size:.6rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem;">🎯 Your 90-Day Mission</div>
+      <div class="plan-goal" id="plan-goal"></div>
+    </div>
+
+    <!-- quick wins -->
+    <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.75rem;">⚡ Do This Week</div>
+    <div class="quick-wins" id="quick-wins"></div>
+
+    <!-- monthly plan -->
+    <div id="monthly-plan"></div>
+
+    <!-- success metrics -->
+    <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.75rem;margin-top:1.5rem;">✅ How to Know You're on Track</div>
+    <div class="success-grid" id="success-metrics"></div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <span>◈ JobWhiz Lab · Decision Support System</span>
+  <span>Groq LLaMA3 · Live MySQL · Prescriptive Analytics</span>
+</footer>
+
+<script>
+// ── API BASE ─────────────────────────────────────────────────────
+// Always points to FastAPI (uvicorn on :8000).
+// Live Server on :5500 serves the HTML — that is separate from the API.
+const API = 'http://127.0.0.1:8000';
+
+async function get(ep) {
+  const r = await fetch(API + ep);
+  if (!r.ok) throw new Error(ep);
+  return r.json();
+}
+async function post(ep, fd) {
+  const r = await fetch(API + ep, { method:'POST', body:fd });
+  if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'API error'); }
+  return r.json();
+}
+
+// ── Dropdown fallback (used by both offline and error paths) ─────
+function _applyFallbackDropdowns() {
+  const fallbackRoles  = ['Data Analyst','Data Scientist','Data Engineer','ML Engineer',
+                          'Business Analyst','AI Engineer','Software Engineer','Fresher / Student'];
+  const fallbackCities = ['Bangalore','Hyderabad','Mumbai','Delhi NCR','Chennai','Pune'];
+  document.getElementById('f-current').innerHTML =
+    fallbackRoles.map(r => `<option value="${r}">${r}</option>`).join('');
+  document.getElementById('f-target').innerHTML =
+    fallbackRoles.slice(0,-1).map(r => `<option value="${r}">${r}</option>`).join('');
+  document.getElementById('f-city').innerHTML =
+    fallbackCities.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+// ── Populate Dropdowns from API ──────────────────────────────────
+async function loadDropdowns() {
+  try {
+    const [roles, cities] = await Promise.all([
+      get('/api/dss/config/roles'),
+      get('/api/dss/config/cities'),
+    ]);
+
+    const currentSel = document.getElementById('f-current');
+    const targetSel  = document.getElementById('f-target');
+    const citySel    = document.getElementById('f-city');
+
+    // Roles — add "Fresher / Student" as a fixed extra option for current role
+    const currentRoles = [...roles, 'Fresher / Student'];
+    currentSel.innerHTML = currentRoles.map(r =>
+      `<option value="${r}">${r}</option>`
+    ).join('');
+
+    targetSel.innerHTML = roles.map(r =>
+      `<option value="${r}">${r}</option>`
+    ).join('');
+
+    // Default target to something different from current
+    if (roles.length > 1) targetSel.selectedIndex = 1;
+
+    // Cities
+    citySel.innerHTML = cities.map(c =>
+      `<option value="${c}">${c}</option>`
+    ).join('');
+
+  } catch(e) {
+    console.warn('Config routes not found — using fallback dropdowns. Have you deployed the latest dss.py?', e);
+    _applyFallbackDropdowns();
+  }
+}
+
+
+async function checkAPI() {
+  const dot = document.getElementById('apiDot');
+  const lbl = document.getElementById('apiLabel');
+  try {
+    await get('/');
+    dot.classList.add('live');
+    lbl.textContent = 'API Live';
+    lbl.style.color = 'var(--green)';
+    // Only load dynamic data once we confirm the API is reachable
+    loadPulse();
+    loadDropdowns();
+  } catch {
+    dot.style.background = 'var(--danger)';
+    lbl.textContent = 'API Offline — start uvicorn';
+    lbl.style.color = 'var(--danger)';
+    // API is down — populate dropdowns with fallbacks immediately
+    _applyFallbackDropdowns();
+    console.error(
+      '%c[JobWhiz] FastAPI not reachable at ' + API + '\n' +
+      'Run: uvicorn main:app --reload',
+      'color:#ff4f6b;font-weight:bold'
+    );
+  }
+}
+
+// ── Market Pulse ─────────────────────────────────────────────────
+async function loadPulse() {
+  try {
+    const d = await get('/api/dss/market-pulse');
+    document.getElementById('p-jobs').textContent  = Number(d.total_jobs).toLocaleString();
+    document.getElementById('p-sal').textContent   = '₹' + d.avg_salary + 'L';
+    document.getElementById('p-comp').textContent  = d.companies;
+    document.getElementById('p-role').textContent  = d.hottest_role;
+  } catch(e) { console.warn('Pulse:', e); }
+}
+
+// ── MAIN ANALYSIS ────────────────────────────────────────────────
+async function runAnalysis() {
+  const btn = document.getElementById('analyseBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analysing...';
+
+  const current  = document.getElementById('f-current').value;
+  const target   = document.getElementById('f-target').value;
+  const city     = document.getElementById('f-city').value;
+  const exp      = document.getElementById('f-exp').value;
+  const skills   = document.getElementById('f-skills').value;
+
+  // Run all 4 sections in parallel (plan waits for gap)
+  showLoading('gap');
+  showLoading('roi');
+  showLoading('paths');
+
+  let gapData = null;
+
+  try {
+    const fd = new FormData();
+    fd.append('current_role', current); fd.append('target_role', target);
+    fd.append('city', city); fd.append('experience', exp); fd.append('skills', skills);
+
+    const [gap, roi, paths] = await Promise.all([
+      post('/api/dss/gap-analysis',  buildFD({current_role:current,target_role:target,city,experience:exp,skills})),
+      post('/api/dss/skill-roi',     buildFD({current_role:current,skills})),
+      post('/api/dss/career-paths',  buildFD({current_role:current,experience:exp,city})),
+    ]);
+
+    gapData = gap;
+    renderGap(gap);
+    renderROI(roi);
+    renderPaths(paths);
+
+    // Action plan uses gap data
+    showLoading('plan');
+    try {
+      const plan = await post('/api/dss/action-plan', buildFD({
+        current_role: current, target_role: target, city, experience: exp, skills,
+        missing_skills: (gap.missing_skills || []).join(', '),
+        salary_gap: gap.salary_gap || '0',
+      }));
+      renderPlan(plan);
+    } catch(e) { showError('plan', e.message); }
+
+  } catch(e) {
+    showError('gap', e.message);
+    showError('roi', e.message);
+    showError('paths', e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '⚡ Re-Analyse';
+}
+
+function buildFD(obj) {
+  const fd = new FormData();
+  Object.entries(obj).forEach(([k,v]) => fd.append(k, v));
+  return fd;
+}
+
+function showLoading(id) {
+  document.getElementById(`${id}-loading`).classList.remove('hidden');
+  document.getElementById(`${id}-placeholder`).classList.add('hidden');
+  document.getElementById(`${id}-results`).classList.add('hidden');
+}
+function showResults(id) {
+  document.getElementById(`${id}-loading`).classList.add('hidden');
+  document.getElementById(`${id}-placeholder`).classList.add('hidden');
+  document.getElementById(`${id}-results`).classList.remove('hidden');
+}
+function showError(id, msg) {
+  document.getElementById(`${id}-loading`).classList.add('hidden');
+  const ph = document.getElementById(`${id}-placeholder`);
+  ph.classList.remove('hidden');
+  ph.style.color = 'var(--danger)';
+  ph.textContent = 'Error: ' + msg;
+}
+
+// ── RENDER GAP ───────────────────────────────────────────────────
+function renderGap(d) {
+  showResults('gap');
+
+  const salColor  = d.salary_gap > 0 ? 'gold' : d.salary_gap === 0 ? 'green' : 'red';
+  const expColor  = d.exp_fit === 'Match' ? 'green' : d.exp_fit === 'Under' ? 'amber' : 'amber';
+
+  document.getElementById('gap-kpis').innerHTML = `
+    <div class="gap-cell">
+      <div class="gap-val ${salColor}">₹${Math.abs(d.salary_gap)}L</div>
+      <div class="gap-label">Salary Gap</div>
+      <div class="gap-sub">${d.salary_gap > 0 ? `Target pays ₹${d.salary_gap}L more` : d.salary_gap === 0 ? 'Already at market rate' : 'You earn above target avg'}</div>
+    </div>
+    <div class="gap-cell">
+      <div class="gap-val ${d.skill_match_pct >= 60 ? 'green' : d.skill_match_pct >= 30 ? 'amber' : 'red'}">${d.skill_match_pct}%</div>
+      <div class="gap-label">Skill Match</div>
+      <div class="gap-sub">${d.matched_skills.length} of top skills matched</div>
+    </div>
+    <div class="gap-cell">
+      <div class="gap-val ${d.jobs_available > 10 ? 'green' : d.jobs_available > 3 ? 'amber' : 'red'}">${d.jobs_available}</div>
+      <div class="gap-label">Jobs Available</div>
+      <div class="gap-sub">In ${document.getElementById('f-city').value} for ${d.target_role}</div>
+    </div>
+    <div class="gap-cell">
+      <div class="gap-val ${expColor}">${d.exp_fit}</div>
+      <div class="gap-label">Exp Fit</div>
+      <div class="gap-sub">Market needs ${d.avg_exp_required}</div>
+    </div>
+    <div class="gap-cell">
+      <div class="gap-val gold">${d.missing_skills.length}</div>
+      <div class="gap-label">Skills to Add</div>
+      <div class="gap-sub">Priority gaps identified</div>
+    </div>`;
+
+  document.getElementById('matched-chips').innerHTML =
+    d.matched_skills.map(s => `<span class="chip chip-match">✓ ${s}</span>`).join('');
+  document.getElementById('missing-chips').innerHTML =
+    d.missing_skills.map(s => `<span class="chip chip-miss">+ ${s}</span>`).join('');
+
+  const verdict = d.skill_match_pct >= 60
+    ? `Strong foundation — ${d.skill_match_pct}% skill match puts you in a good position. Focus on the ${d.missing_skills.length} missing skills to become competitive.`
+    : d.skill_match_pct >= 30
+    ? `Moderate gap — you have the basics but need to build depth. The ₹${Math.abs(d.salary_gap)}L salary gap closes as you fill the skill gaps.`
+    : `Significant gap — but all ${d.missing_skills.length} missing skills are learnable in 3–6 months. The ${d.jobs_available} live openings show demand is real.`;
+
+  document.getElementById('gap-note').innerHTML =
+    `<span class="tag">Gap Verdict</span> <strong>${verdict}</strong>`;
+}
+
+// ── RENDER ROI ───────────────────────────────────────────────────
+function renderROI(data) {
+  showResults('roi');
+  if (!data.length) { showError('roi', 'No skills to evaluate'); return; }
+  const maxROI = Math.max(...data.map(d => d.roi_score));
+
+  document.getElementById('roi-rows').innerHTML = data.map((d, i) => `
+    <div class="roi-row">
+      <span class="roi-rank">#${i+1} ${d.skill}</span>
+      <div>
+        <div class="roi-bar-wrap">
+          <div class="roi-bar-fill" style="width:0%" data-w="${(d.roi_score/maxROI)*100}"></div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:.58rem;color:var(--muted);margin-top:.2rem;">
+          ₹${d.projected_salary}L projected
+        </div>
+      </div>
+      <span style="text-align:right;color:var(--green)">+₹${d.salary_premium}L</span>
+      <span style="text-align:right;color:var(--muted)">${d.weeks_to_learn}w</span>
+      <span style="text-align:right;color:var(--gold);font-weight:600">${d.roi_score}</span>
+    </div>`).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.roi-bar-fill').forEach(b => b.style.width = b.dataset.w + '%');
+  }, 80);
+}
+
+// ── RENDER PATHS ─────────────────────────────────────────────────
+function renderPaths(data) {
+  showResults('paths');
+  const colors = ['var(--gold)','var(--accent2)','var(--purple)'];
+  document.getElementById('paths-grid').innerHTML = data.map((p, i) => `
+    <div class="path-card ${i===0?'best':''}">
+      ${i===0?'<div class="best-badge">★ Highest Return</div>':''}
+      <div class="path-role">${p.role}</div>
+      <div style="display:flex;align-items:baseline;gap:.35rem;margin-bottom:.75rem;">
+        <div class="path-salary" style="color:${colors[i]}">₹${p.avg_salary}L</div>
+        <span class="path-jump">+₹${p.salary_jump}L (${p.jump_pct}%)</span>
+      </div>
+      <div class="path-meta">
+        <span class="path-tag">${p.jobs_available} jobs in city</span>
+        <span class="path-tag warn">${p.timeline_months} months</span>
+        <span class="path-tag warn">${p.difficulty}</span>
+      </div>
+      <div class="path-skills" style="margin-top:1rem;">
+        <div class="path-skills-label">Skills needed</div>
+        <div class="chip-row">
+          ${(p.skills_needed||[]).map(s=>`<span class="chip chip-miss" style="font-size:.58rem">${s}</span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── RENDER PLAN ──────────────────────────────────────────────────
+function renderPlan(p) {
+  showResults('plan');
+
+  document.getElementById('plan-goal').textContent = p.goal || '—';
+
+  document.getElementById('quick-wins').innerHTML = (p.quick_wins||[]).map(w => `
+    <div class="qw-item"><span class="qw-icon">⚡</span><span>${w}</span></div>`).join('');
+
+  const months = [
+    { key:'month_1', label:'Month 1' },
+    { key:'month_2', label:'Month 2' },
+    { key:'month_3', label:'Month 3' },
+  ];
+
+  document.getElementById('monthly-plan').innerHTML = months.map(m => {
+    const data = p[m.key];
+    if (!data) return '';
+    return `
+      <div class="month-block">
+        <div class="month-header">${m.label} — ${data.theme || ''}</div>
+        <div style="display:grid;grid-template-columns:60px 1fr 1fr 1fr;gap:.75rem;margin-bottom:.5rem;">
+          <span class="week-header">Week</span>
+          <span class="week-header">Focus</span>
+          <span class="week-header">Resource</span>
+          <span class="week-header">Output</span>
+        </div>
+        ${(data.weeks||[]).map(w => `
+          <div class="week-row">
+            <div class="week-num">Wk ${w.week}</div>
+            <div class="week-cell">${w.focus||'—'}</div>
+            <div class="week-cell" style="color:var(--gold)">${w.resource||'—'}</div>
+            <div class="week-cell" style="color:var(--green)">${w.output||'—'}</div>
+          </div>`).join('')}
+      </div>`;
+  }).join('');
+
+  document.getElementById('success-metrics').innerHTML = (p.success_metrics||[]).map(s =>
+    `<div class="success-item">${s}</div>`).join('');
+}
+
+// ── BOOT ────────────────────────────────────────────────────────
+// checkAPI confirms the server is up, then triggers pulse + dropdowns.
+// If offline, fallback dropdowns are applied immediately.
+checkAPI();
+
+// Scroll animations
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting){ e.target.style.opacity='1'; e.target.style.transform='none'; } });
+}, { threshold:.06 });
+document.querySelectorAll('.anim').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

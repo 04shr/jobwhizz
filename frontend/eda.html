@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JobWhiz Lab · Descriptive Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --bg:#0a0c10; --surface:#111318; --surface2:#161921;
+  --border:#1e2230; --border2:#252a3a;
+  --accent:#00e5a0; --accent2:#4f8bff; --warn:#ffb340; --danger:#ff4f6b; --purple:#b57bee;
+  --text:#e8eaf0; --muted:#aed8d8; --muted2:#b3b6c0;
+  --font-head:'Syne',sans-serif; --font-mono:'DM Mono',monospace; --font-body:'Instrument Sans',sans-serif;
+  --r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+
+/* ── NOISE TEXTURE ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.025;pointer-events:none;z-index:0;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2.5rem;height:60px;background:rgba(10,12,16,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:var(--font-head);font-weight:800;font-size:1.05rem;color:var(--accent);letter-spacing:-.02em;text-decoration:none;}
+.nav-logo span{color:var(--text);}
+.nav-links{display:flex;gap:.2rem;list-style:none;}
+.nav-links a{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);text-decoration:none;padding:.38rem .8rem;border-radius:6px;border:1px solid transparent;transition:all .18s;cursor:pointer;}
+.nav-links a:hover,.nav-links a.active{color:var(--accent);border-color:rgba(0,229,160,.3);background:rgba(0,229,160,.05);}
+.api-pill{display:flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.65rem;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.api-dot.live{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── LAYOUT ── */
+main{padding-top:60px;position:relative;z-index:1;}
+
+/* ── PAGE HEADER ── */
+.page-header{padding:3.5rem 2.5rem 0;max-width:1200px;margin:0 auto;}
+.page-tag{font-family:var(--font-mono);font-size:.65rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+.page-tag::before{content:'';display:block;width:20px;height:1px;background:var(--accent);}
+.page-header h1{font-family:var(--font-head);font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.75rem;}
+.page-header h1 em{font-style:normal;color:var(--accent);}
+.page-header p{font-size:.9rem;color:var(--muted);max-width:580px;line-height:1.75;}
+
+/* ── SECTION ── */
+.section{max-width:1200px;margin:0 auto;padding:2.5rem 2.5rem 0;}
+.section-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.section-num{font-family:var(--font-mono);font-size:.62rem;color:var(--muted2);margin-right:.25rem;}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;transition:border-color .2s;}
+.card:hover{border-color:var(--border2);}
+.card-title{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.25rem;}
+
+/* ── KPI ROW ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.kpi-cell{background:var(--surface);padding:1.5rem 1.25rem;}
+.kpi-val{font-family:var(--font-head);font-size:2rem;font-weight:800;letter-spacing:-.04em;color:var(--accent);line-height:1;}
+.kpi-val.blue{color:var(--accent2);}
+.kpi-val.warn{color:var(--warn);}
+.kpi-val.danger{color:var(--danger);}
+.kpi-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-top:.4rem;letter-spacing:.04em;text-transform:uppercase;}
+.kpi-insight{font-size:.75rem;color:var(--muted);margin-top:.5rem;line-height:1.5;}
+
+/* ── ANALYST NOTE ── */
+.analyst-note{background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.15);border-left:3px solid var(--accent);border-radius:0 var(--r) var(--r) 0;padding:1rem 1.25rem;margin-top:1.25rem;font-size:.8rem;line-height:1.7;color:var(--muted);}
+.analyst-note strong{color:var(--text);font-weight:600;}
+.analyst-note .tag{display:inline-block;font-family:var(--font-mono);font-size:.6rem;padding:.15rem .5rem;border-radius:4px;background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);margin-right:.4rem;vertical-align:middle;}
+
+/* ── DATA QUALITY TABLE ── */
+.dq-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.74rem;}
+.dq-table th{text-align:left;padding:.6rem 1rem;border-bottom:1px solid var(--border);color:var(--muted);font-size:.62rem;letter-spacing:.07em;text-transform:uppercase;font-weight:400;}
+.dq-table td{padding:.65rem 1rem;border-bottom:1px solid rgba(30,34,48,.5);}
+.dq-table tr:last-child td{border-bottom:none;}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:.6rem;padding:.18rem .55rem;border-radius:4px;font-weight:500;}
+.badge-ok{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.badge-warn{background:rgba(255,179,64,.1);color:var(--warn);border:1px solid rgba(255,179,64,.2);}
+.badge-info{background:rgba(79,139,255,.1);color:var(--accent2);border:1px solid rgba(79,139,255,.2);}
+
+/* ── CHART GRID ── */
+.chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.chart-grid-3{display:grid;grid-template-columns:2fr 1fr;gap:1rem;}
+@media(max-width:768px){.chart-grid-2,.chart-grid-3{grid-template-columns:1fr;}}
+
+/* ── BAR CHART ── */
+.bar-list{display:flex;flex-direction:column;gap:.55rem;}
+.bar-row{display:grid;grid-template-columns:110px 1fr 48px;align-items:center;gap:.75rem;}
+.bar-label{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{height:7px;background:var(--border);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+.bar-val{font-family:var(--font-mono);font-size:.66rem;color:var(--text);}
+
+/* ── LEARN BOX ── */
+.learn-toggle{font-family:var(--font-mono);font-size:.65rem;color:var(--accent2);cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;margin-top:1rem;border:none;background:none;padding:0;transition:opacity .2s;}
+.learn-toggle:hover{opacity:.7;}
+.learn-box{display:none;background:rgba(79,139,255,.04);border:1px solid rgba(79,139,255,.15);border-radius:var(--r);padding:1rem 1.25rem;margin-top:.75rem;font-size:.8rem;color:var(--muted);line-height:1.75;}
+.learn-box.open{display:block;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.learn-box strong{color:var(--text);}
+
+/* ── SKILL CATEGORIES ── */
+.skill-group{margin-bottom:1.25rem;}
+.skill-group-label{font-family:var(--font-mono);font-size:.6rem;color:var(--muted2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+
+/* ── SUMMARY CARD ── */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:.75rem;}
+.summary-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;display:flex;align-items:flex-start;gap:.75rem;}
+.summary-icon{font-size:1.1rem;flex-shrink:0;margin-top:.05rem;}
+.summary-text{font-size:.82rem;color:var(--muted);line-height:1.6;}
+.summary-text strong{color:var(--text);display:block;margin-bottom:.15rem;font-size:.85rem;}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.72rem;color:var(--muted);padding:1.5rem 0;}
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── JOBS TABLE ── */
+.jobs-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.73rem;}
+.jobs-table th{text-align:left;padding:.65rem 1rem;border-bottom:1px solid var(--border);color:var(--muted);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;font-weight:400;}
+.jobs-table td{padding:.65rem 1rem;border-bottom:1px solid rgba(30,34,48,.4);color:var(--text);}
+.jobs-table tr:hover td{background:rgba(0,229,160,.02);}
+.jobs-table tr:last-child td{border-bottom:none;}
+
+/* ── CORR BADGE ── */
+.corr-badge{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.72rem;padding:.4rem .9rem;border-radius:6px;background:rgba(79,139,255,.08);border:1px solid rgba(79,139,255,.2);color:var(--accent2);margin-top:1rem;}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:1.5rem 2.5rem;margin-top:4rem;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem;position:relative;z-index:1;}
+
+/* ── SKEWNESS METER ── */
+.skew-meter{margin-top:1rem;}
+.skew-track{height:8px;background:var(--border);border-radius:4px;position:relative;overflow:visible;margin:.5rem 0;}
+.skew-fill{position:absolute;left:50%;height:100%;background:var(--warn);border-radius:4px;width:35%;transform-origin:left;}
+.skew-center{position:absolute;left:50%;top:-3px;width:2px;height:14px;background:var(--muted2);}
+.skew-labels{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.6rem;color:var(--muted2);}
+
+/* ── ANIMATIONS ── */
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:slideUp .5s ease forwards;}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">◈ Job<span>Whiz</span> Lab</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="index.html#dashboard">Dashboard</a></li>
+    <li><a class="active">EDA</a></li>
+    <li><a href="nlp.html">NLP</a></li>
+    <li><a href="sml.html">SML</a></li>
+    <li><a href="dss.html"  id="nav-dss">DSS</a></li>
+  </ul>
+  <div class="api-pill">
+    <div class="api-dot" id="apiDot"></div>
+    <span id="apiLabel">Connecting...</span>
+  </div>
+</nav>
+
+<main>
+
+<!-- ── PAGE HEADER ── -->
+<div class="page-header anim" style="animation-delay:.05s">
+  <div class="page-tag">01 · Descriptive Analytics</div>
+  <h1>What does the<br/><em>job market</em> look like?</h1>
+  <p>Exploratory data analysis on <span id="rowCount">...</span> real job listings fetched from the Adzuna API. Every chart below is a SQL query on live data — no hardcoded numbers.</p>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 1 — DATA SNAPSHOT
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.1s">
+  <div class="section-label"><span class="section-num">01</span> Data Snapshot</div>
+
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="loading" style="padding:2rem;grid-column:1/-1"><div class="spinner"></div>Loading KPIs...</div>
+  </div>
+
+  <div class="analyst-note" style="margin-top:1rem;">
+    <span class="tag">Analyst Note</span>
+    <strong>Reading KPIs like an analyst.</strong> Numbers alone mean nothing — what matters is what they imply. <span id="rowCount">...</span> jobs across 24 cities tells us this is a distributed market, not just a Bangalore story. Zero salary nulls is unusually clean data, but watch out — Adzuna returns role-level salary estimates, not individually reported figures. That means salary variance will be lower than real-world data.
+  </div>
+
+  <button class="learn-toggle" onclick="toggleLearn('learn1')">📖 What is a KPI?</button>
+  <div class="learn-box" id="learn1">
+    <strong>Key Performance Indicator (KPI)</strong> — A summary metric that gives you a quick read on the dataset before diving deeper. In analysis, you always start here: how much data do you have, is it complete, and what's the ballpark range? These four numbers anchor every analysis that follows.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 2 — DATA QUALITY
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.15s">
+  <div class="section-label"><span class="section-num">02</span> Data Quality Check</div>
+
+  <div class="card">
+    <div class="card-title">Field-by-field quality assessment</div>
+    <table class="dq-table">
+      <thead>
+        <tr>
+          <th>Column</th>
+          <th>Type</th>
+          <th>Null Count</th>
+          <th>Coverage</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="dq-tbody">
+        <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="analyst-note">
+    <span class="tag">Analyst Note</span>
+    <strong>Why quality check first?</strong> Every real analysis starts here before touching a single chart. Missing data changes what conclusions are valid. Salary here is Adzuna's role-level estimate — it's accurate directionally (Data Engineers earn more than Data Analysts) but doesn't reflect individual negotiation ranges. <strong>date_posted</strong> is partly approximated — older listings defaulted to fetch date due to API limitations. We document this so readers know.
+  </div>
+
+  <button class="learn-toggle" onclick="toggleLearn('learn2')">📖 What is data quality?</button>
+  <div class="learn-box" id="learn2">
+    <strong>Data Quality</strong> — Before analysing anything, you audit your dataset for completeness, consistency, and accuracy. The three things to check: <strong>nulls</strong> (missing values), <strong>duplicates</strong> (same record twice), and <strong>outliers</strong> (values that don't make sense). This step separates real analysts from people who just make charts.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 3 — WHERE ARE THE JOBS?
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.2s">
+  <div class="section-label"><span class="section-num">03</span> Univariate Analysis — Location</div>
+
+  <div class="chart-grid-2">
+    <div class="card">
+      <div class="card-title">Jobs by City — Top 10</div>
+      <div class="bar-list" id="city-bars">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribution insight</div>
+      <p style="font-size:.85rem;color:var(--muted);line-height:1.75;" id="city-insight"><span class="spinner"></span> Calculating insight...</p>
+      <div class="skew-meter">
+        <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-bottom:.4rem;">Geographic concentration</div>
+        <div class="skew-track"><div class="skew-center"></div><div class="skew-fill" id="city-skew-fill"></div></div>
+        <div class="skew-labels"><span>Dispersed</span><span>Concentrated</span></div>
+      </div>
+      <button class="learn-toggle" onclick="toggleLearn('learn3')">📖 What is univariate analysis?</button>
+      <div class="learn-box" id="learn3">
+        <strong>Univariate analysis</strong> means looking at <em>one variable at a time</em>. Here we're just asking: how are jobs distributed across cities? No other variable involved yet. It's the foundation — you understand each variable before combining them.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 4 — WHAT SKILLS DO COMPANIES WANT?
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.22s">
+  <div class="section-label"><span class="section-num">04</span> Univariate Analysis — Skills</div>
+
+  <div class="card">
+    <div class="card-title">Skill frequency — grouped by category</div>
+    <div id="skills-grouped">
+      <div class="loading"><div class="spinner"></div>Loading...</div>
+    </div>
+
+    <div class="analyst-note">
+      <span class="tag">Analyst Note</span>
+      <strong>Skills don't exist in isolation — categories matter.</strong> Grouping by Programming, Visualisation, Cloud, and ML shows the shape of what employers actually want. Python and SQL dominate because they're the <em>lingua franca</em> of all data roles — not optional extras. Cloud skills (AWS, Azure, GCP) are rising fast, appearing even in analyst JDs that didn't traditionally require them.
+    </div>
+
+    <button class="learn-toggle" onclick="toggleLearn('learn4')">📖 Why group skills into categories?</button>
+    <div class="learn-box" id="learn4">
+      <strong>Categorical grouping</strong> turns a long list into a story. Instead of "Python is #1, SQL is #2," you can say "Programming fundamentals dominate, with Visualisation tools close behind — Cloud is emerging." That's the difference between reporting data and interpreting it. Interpretation is what interviewers test for.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 5 — HOW IS SALARY DISTRIBUTED?
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.25s">
+  <div class="section-label"><span class="section-num">05</span> Univariate Analysis — Salary</div>
+
+  <div class="chart-grid-2">
+    <div class="card">
+      <div class="card-title">Salary distribution — histogram</div>
+      <canvas id="salaryHistChart" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribution shape</div>
+      <p style="font-size:.85rem;color:var(--muted);line-height:1.8;">
+        The salary distribution is <strong style="color:var(--text)">right-skewed</strong> — most listings cluster in the <strong style="color:var(--accent)">₹8–12L</strong> range, which represents entry-to-mid level roles. A smaller high-earning tail (₹12–18L) reflects senior and specialist positions.
+      </p>
+      <p style="font-size:.82rem;color:var(--muted);line-height:1.8;margin-top:1rem;">
+        ⚠️ <strong style="color:var(--warn)">Data limitation:</strong> Adzuna returns role-level salary benchmarks, not individually reported salaries. This explains why only 5 unique salary values exist across <span id="rowCount">...</span> listings. The shape is directionally correct — absolute values should be cross-referenced with platforms like Glassdoor or AmbitionBox.
+      </p>
+
+      <button class="learn-toggle" onclick="toggleLearn('learn5')">📖 What does right-skewed mean?</button>
+      <div class="learn-box" id="learn5">
+        <strong>Skewness</strong> describes the asymmetry of a distribution. A <strong>right-skewed</strong> (positively skewed) distribution has most values on the left, with a long tail pulling right. In salary data this is extremely common — most people earn moderate salaries, but a small number of high earners pull the average (mean) above the median. <em>Always compare mean vs median for salary data.</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 6 — ROLE vs LOCATION vs SALARY
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.28s">
+  <div class="section-label"><span class="section-num">06</span> Bivariate Analysis — Role & Location vs Salary</div>
+
+  <div class="chart-grid-2">
+    <div class="card">
+      <div class="card-title">Average salary by job role</div>
+      <div class="bar-list" id="role-salary-bars">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Average salary by city — top 8</div>
+      <div class="bar-list" id="city-salary-bars">
+        <div class="loading"><div class="spinner"></div>Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="analyst-note" style="margin-top:1rem;">
+    <span class="tag">Analyst Note</span>
+    <strong>Two variables, one conclusion.</strong> Data Engineers command the highest average salary at ₹13L — nearly 50% more than a Business Analyst at ₹8.6L. On the city side, Bangalore leads for volume but not always for salary — this is a classic insight that surprises hiring managers. <strong>Role matters more than location for salary maximisation at entry level.</strong>
+  </div>
+
+  <button class="learn-toggle" onclick="toggleLearn('learn6')">📖 What is bivariate analysis?</button>
+  <div class="learn-box" id="learn6">
+    <strong>Bivariate analysis</strong> looks at <em>two variables together</em> to find relationships. Here: does salary change based on role? Does it change based on city? Each comparison is bivariate. When you combine them ("Data Engineer in Bangalore"), that's multivariate — but we'll save that for the Predictive page.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 7 — DOES EXPERIENCE PAY OFF?
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.3s">
+  <div class="section-label"><span class="section-num">07</span> Correlation — Experience vs Salary</div>
+
+  <div class="chart-grid-3">
+    <div class="card">
+      <div class="card-title">Experience (max years) vs average salary</div>
+      <canvas id="expSalaryChart" height="240"></canvas>
+      <div class="corr-badge" id="corr-badge">
+        <span>⟳</span> Calculating correlation...
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">What this tells us</div>
+      <p style="font-size:.83rem;color:var(--muted);line-height:1.8;">
+        The relationship between experience and salary is <strong style="color:var(--text)">positive but non-linear</strong>. Entry-level roles (0–2 years) cluster around ₹9L. Mid-level (5–7 years) shows a salary jump. Beyond 10 years the data gets sparse and noisy — fewer listings, higher variance.
+      </p>
+      <p style="font-size:.83rem;color:var(--muted);line-height:1.8;margin-top:.85rem;">
+        The most important jump happens between <strong style="color:var(--accent)">2→5 years</strong>. That's the critical window — moving from junior to mid-level. Target this transition deliberately.
+      </p>
+
+      <button class="learn-toggle" onclick="toggleLearn('learn7')">📖 What is correlation?</button>
+      <div class="learn-box" id="learn7">
+        <strong>Correlation</strong> measures how strongly two variables move together. The <strong>Pearson r coefficient</strong> ranges from -1 (perfect negative) to +1 (perfect positive). r = 0.6–0.8 is considered strong in social/economic data. <em>Correlation ≠ causation</em> — experience doesn't cause higher salary directly, but employers use it as a proxy for skill depth.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 8 — WHO'S HIRING?
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.32s">
+  <div class="section-label"><span class="section-num">08</span> Bivariate Analysis — Companies & Volume</div>
+
+  <div class="card">
+    <div class="card-title">Top 10 hiring companies</div>
+    <div class="bar-list" id="company-bars">
+      <div class="loading"><div class="spinner"></div>Loading...</div>
+    </div>
+
+    <div class="analyst-note">
+      <span class="tag">Analyst Note</span>
+      <strong>MNCs dominate volume, but volume ≠ opportunity.</strong> Amazon and UnitedHealth Group lead with 18 listings each — but large companies have longer hiring cycles and more competition. Smaller companies with 3–6 listings often move faster and give more responsibility earlier. For a fresher, <strong>6 listings at a mid-size firm may be a better shot than 18 at Amazon.</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 9 — RAW DATA TABLE
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.34s">
+  <div class="section-label"><span class="section-num">09</span> Raw Data — All Jobs</div>
+  <div class="card">
+    <div class="card-title">Live listings from database</div>
+    <div style="overflow-x:auto;">
+      <table class="jobs-table">
+        <thead>
+          <tr>
+            <th>Title</th><th>Company</th><th>City</th>
+            <th>Salary (LPA)</th><th>Exp Range</th><th>Posted</th>
+          </tr>
+        </thead>
+        <tbody id="jobs-tbody">
+          <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 10 — KEY TAKEAWAYS
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.36s;padding-bottom:3rem;">
+  <div class="section-label"><span class="section-num">10</span> Key Takeaways — Executive Summary</div>
+
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="summary-icon">🐍</div>
+      <div class="summary-text">
+        <strong>Python + SQL are non-negotiable</strong>
+        They appear in the highest proportion of listings across every role type — from Data Analyst to ML Engineer. These are the baseline, not differentiators.
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">🏙️</div>
+      <div class="summary-text">
+        <strong>Bangalore leads in volume, not always salary</strong>
+        Most jobs are in Bangalore but smaller cities like Indore and Jaipur sometimes show higher averages — smaller market, less competition.
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">⚙️</div>
+      <div class="summary-text">
+        <strong>Data Engineers earn the most</strong>
+        At ₹13L average vs ₹8.6L for Business Analysts — engineering skills (Spark, Kafka, Airflow) command a clear premium in the Indian market.
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">📈</div>
+      <div class="summary-text">
+        <strong>The 2→5 year window is the salary inflection point</strong>
+        Experience correlates positively with salary, but the biggest jump happens in mid-level transition. Focus on depth over breadth early in your career.
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">☁️</div>
+      <div class="summary-text">
+        <strong>Cloud is no longer optional</strong>
+        AWS, Azure and GCP appear across analyst, engineer and scientist roles. Adding even one cloud certification meaningfully expands your eligibility.
+      </div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">⚠️</div>
+      <div class="summary-text">
+        <strong>Data limitation to note</strong>
+        Salary figures are Adzuna role-level benchmarks. date_posted is partially approximated for older listings. Conclusions are directionally accurate — treat absolute numbers as indicative, not precise.
+      </div>
+    </div>
+  </div>
+
+  <div class="analyst-note" style="margin-top:1.5rem;">
+    <span class="tag">Interview Tip</span>
+    <strong>This is what a real deliverable looks like.</strong> A business stakeholder doesn't read 9 charts — they read the 6-point summary above. Every analysis should end with a clear, plain-English conclusion that answers the original question. Our question was: <em>"What does the Indian data job market look like?"</em> — and those 6 bullets answer it completely.
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <span>◈ JobWhiz Lab · Descriptive Analytics</span>
+  <span id="footer-note">Loading market data…</span>
+</footer>
+
+<script type="module">
+  import { loadEDA } from "./js/eda.js";
+  loadEDA();
+</script>
+</body>
+</html>

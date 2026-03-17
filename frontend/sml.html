@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JobWhiz Lab · Predictive Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#07090d;--surface:#0f1117;--surface2:#141720;--border:#1a1f2e;--border2:#222840;
+  --accent:#00e5a0;--accent2:#4f8bff;--warn:#ffb340;--danger:#ff4f6b;--purple:#b57bee;--teal:#00c9d4;
+  --text:#e8eaf0;--muted:#7b98a3;--muted2:#beccf5;
+  --font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;--font-body:'Instrument Sans',sans-serif;
+  --r:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.02;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,201,212,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,201,212,.025) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2.5rem;height:60px;background:rgba(7,9,13,.94);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:var(--font-head);font-weight:800;font-size:1.05rem;color:var(--teal);letter-spacing:-.02em;text-decoration:none;}
+.nav-logo span{color:var(--text);}
+.nav-links{display:flex;gap:.2rem;list-style:none;}
+.nav-links a{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);text-decoration:none;padding:.38rem .8rem;border-radius:6px;border:1px solid transparent;transition:all .18s;cursor:pointer;}
+.nav-links a:hover,.nav-links a.active{color:var(--teal);border-color:rgba(0,201,212,.3);background:rgba(0,201,212,.05);}
+.api-pill{display:flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.65rem;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.api-dot.live{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+main{padding-top:60px;position:relative;z-index:1;}
+.page-header{padding:3.5rem 2.5rem 0;max-width:1200px;margin:0 auto;}
+.page-tag{font-family:var(--font-mono);font-size:.65rem;color:var(--teal);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+.page-tag::before{content:'';display:block;width:20px;height:1px;background:var(--teal);}
+.page-header h1{font-family:var(--font-head);font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.75rem;}
+.page-header h1 em{font-style:normal;color:var(--teal);}
+.page-header p{font-size:.9rem;color:var(--muted);max-width:600px;line-height:1.75;}
+.section{max-width:1200px;margin:0 auto;padding:2.5rem 2.5rem 0;}
+.section-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.section-num{font-family:var(--font-mono);font-size:.62rem;color:var(--muted2);margin-right:.25rem;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;}
+.card-title{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.25rem;}
+.card:hover{border-color:var(--border2);}
+.stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.stat-cell{background:var(--surface);padding:1.25rem 1rem;text-align:center;position:relative;}
+.stat-cell::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:40px;height:2px;border-radius:2px;}
+.stat-cell.teal::after{background:var(--teal);}
+.stat-cell.blue::after{background:var(--accent2);}
+.stat-cell.warn::after{background:var(--warn);}
+.stat-cell.danger::after{background:var(--danger);}
+.stat-cell.purple::after{background:var(--purple);}
+.stat-val{font-family:var(--font-head);font-size:1.7rem;font-weight:800;letter-spacing:-.04em;line-height:1;}
+.stat-cell.teal .stat-val{color:var(--teal);}
+.stat-cell.blue .stat-val{color:var(--accent2);}
+.stat-cell.warn .stat-val{color:var(--warn);}
+.stat-cell.danger .stat-val{color:var(--danger);}
+.stat-cell.purple .stat-val{color:var(--purple);}
+.stat-name{font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-top:.35rem;letter-spacing:.05em;text-transform:uppercase;}
+.stat-def{font-size:.7rem;color:var(--muted);margin-top:.4rem;line-height:1.4;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+.grid-32{display:grid;grid-template-columns:2fr 1fr;gap:1rem;}
+@media(max-width:768px){.grid-2,.grid-3,.grid-32{grid-template-columns:1fr;}}
+.predictor-wrap{display:grid;grid-template-columns:1fr 1.2fr;gap:1.5rem;}
+@media(max-width:768px){.predictor-wrap{grid-template-columns:1fr;}}
+.pred-form{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;}
+.field{margin-bottom:1.1rem;}
+.field label{display:block;font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.45rem;}
+.field select,.field input[type=range]{width:100%;background:#0a0c12;border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--font-mono);font-size:.78rem;outline:none;transition:border-color .2s;appearance:none;}
+.field select:focus{border-color:var(--teal);}
+.field input[type=range]{padding:.3rem 0;background:transparent;border:none;accent-color:var(--teal);}
+.pred-btn{width:100%;padding:.85rem;font-family:var(--font-head);font-size:.95rem;font-weight:700;background:var(--teal);color:#000;border:none;border-radius:8px;cursor:pointer;transition:all .2s;letter-spacing:.01em;}
+.pred-btn:hover{background:#00ffb8;transform:translateY(-1px);}
+.pred-result{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;display:flex;flex-direction:column;justify-content:center;}
+.pred-result.has-result{border-color:rgba(0,201,212,.3);background:rgba(0,201,212,.03);}
+.pred-placeholder{text-align:center;color:var(--muted2);font-family:var(--font-mono);font-size:.75rem;padding:2rem 0;}
+.pred-salary{font-family:var(--font-head);font-size:3.5rem;font-weight:800;color:var(--teal);letter-spacing:-.04em;line-height:1;}
+.pred-range-text{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);margin-top:.5rem;}
+.pred-breakdown{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);}
+.pred-row{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.72rem;padding:.35rem 0;color:var(--muted);}
+.pred-row span:last-child{color:var(--text);}
+.formula-box{background:rgba(0,201,212,.04);border:1px solid rgba(0,201,212,.15);border-radius:8px;padding:.85rem 1rem;margin-top:1rem;font-family:var(--font-mono);font-size:.72rem;color:var(--teal);}
+.reg-stats{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem;}
+.reg-badge{font-family:var(--font-mono);font-size:.72rem;padding:.35rem .85rem;border-radius:6px;background:rgba(79,139,255,.08);border:1px solid rgba(79,139,255,.2);color:var(--accent2);}
+.reg-badge.warn{background:rgba(255,179,64,.08);border-color:rgba(255,179,64,.2);color:var(--warn);}
+.reg-badge.ok{background:rgba(0,229,160,.08);border-color:rgba(0,229,160,.2);color:var(--accent);}
+.fi-bar-row{display:grid;grid-template-columns:120px 1fr 60px;align-items:center;gap:.75rem;margin-bottom:.75rem;}
+.fi-label{font-family:var(--font-mono);font-size:.72rem;color:var(--text);}
+.fi-track{height:10px;background:var(--border);border-radius:5px;overflow:hidden;}
+.fi-fill{height:100%;border-radius:5px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.fi-pct{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);}
+.dist-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);text-align:center;margin-top:.5rem;}
+.boxplot-wrap{padding:1rem 0;position:relative;height:80px;display:flex;align-items:center;}
+.bp-line{position:absolute;left:5%;right:5%;height:2px;background:var(--border2);top:50%;}
+.bp-box{position:absolute;height:34px;border:2px solid var(--teal);border-radius:3px;top:50%;transform:translateY(-50%);background:rgba(0,201,212,.08);}
+.bp-median{position:absolute;width:2px;background:var(--warn);height:38px;top:50%;transform:translateY(-50%);}
+.bp-whisker{position:absolute;width:2px;background:var(--muted);height:16px;top:50%;transform:translateY(-50%);}
+.bp-labels{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.58rem;color:var(--muted2);padding:0 5%;margin-top:.25rem;}
+.hyp-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;}
+.hyp-statement{font-family:var(--font-mono);font-size:.75rem;padding:1rem;background:rgba(79,139,255,.06);border:1px solid rgba(79,139,255,.15);border-radius:8px;margin-bottom:1.25rem;line-height:1.7;color:var(--text);}
+.hyp-result{display:flex;align-items:center;gap:.75rem;padding:1rem;border-radius:8px;margin-top:1rem;}
+.hyp-result.reject{background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);}
+.hyp-result.fail{background:rgba(255,179,64,.06);border:1px solid rgba(255,179,64,.2);}
+.hyp-icon{font-size:1.5rem;}
+.hyp-text{font-size:.82rem;color:var(--muted);line-height:1.6;}
+.hyp-text strong{color:var(--text);}
+.p-meter{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:.75rem;}
+.p-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--danger),var(--accent));}
+.eval-gauge{text-align:center;padding:1.25rem;}
+.gauge-val{font-family:var(--font-head);font-size:2rem;font-weight:800;letter-spacing:-.04em;}
+.gauge-name{font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-top:.25rem;letter-spacing:.06em;text-transform:uppercase;}
+.gauge-bar{height:6px;background:var(--border);border-radius:3px;margin-top:.65rem;overflow:hidden;}
+.gauge-fill{height:100%;border-radius:3px;transition:width 1.5s ease;}
+.gauge-scale{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.55rem;color:var(--muted2);margin-top:.25rem;}
+.verdict{display:inline-block;font-family:var(--font-mono);font-size:.6rem;padding:.18rem .55rem;border-radius:4px;margin-top:.5rem;}
+.verdict.poor{background:rgba(255,79,107,.1);color:var(--danger);border:1px solid rgba(255,79,107,.2);}
+.verdict.ok{background:rgba(255,179,64,.1);color:var(--warn);border:1px solid rgba(255,179,64,.2);}
+.verdict.good{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.analyst-note{background:rgba(0,201,212,.04);border:1px solid rgba(0,201,212,.12);border-left:3px solid var(--teal);border-radius:0 var(--r) var(--r) 0;padding:1rem 1.25rem;margin-top:1.25rem;font-size:.8rem;line-height:1.75;color:var(--muted);}
+.analyst-note strong{color:var(--text);}
+.analyst-note .tag{display:inline-block;font-family:var(--font-mono);font-size:.6rem;padding:.15rem .5rem;border-radius:4px;background:rgba(0,201,212,.1);color:var(--teal);border:1px solid rgba(0,201,212,.2);margin-right:.4rem;}
+.learn-toggle{font-family:var(--font-mono);font-size:.65rem;color:var(--accent2);cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;margin-top:1rem;border:none;background:none;padding:0;transition:opacity .2s;}
+.learn-toggle:hover{opacity:.7;}
+.learn-box{display:none;background:rgba(79,139,255,.04);border:1px solid rgba(79,139,255,.12);border-radius:var(--r);padding:1rem 1.25rem;margin-top:.75rem;font-size:.8rem;color:var(--muted);line-height:1.8;}
+.learn-box.open{display:block;animation:fadeUp .25s ease;}
+.learn-box strong{color:var(--text);}
+.learn-box code{font-family:var(--font-mono);font-size:.75rem;background:rgba(79,139,255,.08);padding:.1rem .4rem;border-radius:3px;color:var(--accent2);}
+.interview-q{display:flex;align-items:flex-start;gap:.75rem;padding:.85rem 1rem;background:rgba(181,123,238,.04);border:1px solid rgba(181,123,238,.15);border-radius:8px;margin-bottom:.65rem;font-size:.82rem;color:var(--muted);line-height:1.6;}
+.iq-icon{font-family:var(--font-mono);font-size:.6rem;color:var(--purple);background:rgba(181,123,238,.1);border:1px solid rgba(181,123,238,.2);padding:.2rem .45rem;border-radius:4px;flex-shrink:0;margin-top:.1rem;}
+.loading-inline{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.72rem;color:var(--muted);padding:.75rem 0;}
+.spinner-sm{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+footer{border-top:1px solid var(--border);padding:1.5rem 2.5rem;margin-top:4rem;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem;position:relative;z-index:1;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:slideUp .5s ease forwards;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">◈ Job<span>Whiz</span> Lab</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="index.html">Dashboard</a></li>
+    <li><a href="eda.html">EDA</a></li>
+    <li><a href="nlp.html">NLP</a></li>
+    <li><a class="active">SML</a></li>
+    <li><a href="dss.html">DSS</a></li>
+  </ul>
+  <div class="api-pill">
+    <div class="api-dot" id="apiDot"></div>
+    <span id="apiLabel">Connecting...</span>
+  </div>
+</nav>
+
+<main>
+
+<div class="page-header anim" style="animation-delay:.05s">
+  <div class="page-tag">03 · Predictive Analytics</div>
+  <h1>What will <em>salary</em><br/>look like for you?</h1>
+  <p>Statistics, regression, hypothesis testing and model evaluation — using real job market data. Every formula here is computed from your <span id="rowCount">...</span>-row dataset, not simulated.</p>
+</div>
+
+<!-- SECTION 1 — STATISTICAL SUMMARY -->
+<div class="section anim" style="animation-delay:.1s">
+  <div class="section-label"><span class="section-num">01</span> Descriptive Statistics — The Foundation</div>
+  <div class="stat-strip" id="stat-strip">
+    <div class="loading-inline" style="grid-column:1/-1;padding:2rem;"><div class="spinner-sm"></div>Computing from database...</div>
+  </div>
+  <div class="analyst-note" style="margin-top:1rem;">
+    <span class="tag">Interview Answer</span>
+    <strong>"Walk me through the statistics of your dataset."</strong> — Mean tells you the centre, median tells you where most values actually sit, std tells you the spread, and skewness tells you the shape. When mean > median, the distribution is right-skewed — a small number of high-paying roles pull the average up.
+  </div>
+  <button class="learn-toggle" onclick="toggleLearn('l1')">📖 What is skewness and why does it matter?</button>
+  <div class="learn-box" id="l1">
+    <strong>Skewness</strong> measures the asymmetry of a distribution. Positive skewness means right-skewed — most salaries cluster low with a tail of high earners. <strong>Why it matters:</strong> if you use the mean to describe a "typical" salary, you're misleading — the median is more honest. Always report both in interviews. The formula: <code>skewness = Σ((x - μ) / σ)³ / n</code>
+  </div>
+</div>
+
+<!-- SECTION 2 — SALARY PREDICTOR -->
+<div class="section anim" style="animation-delay:.15s">
+  <div class="section-label"><span class="section-num">02</span> Salary Predictor — Rule-Based Model</div>
+  <div class="predictor-wrap">
+    <div class="pred-form">
+      <div class="card-title">Your profile</div>
+      <div class="field">
+        <label>Target Role</label>
+        <select id="p-role" onchange="window.updatePrediction()">
+          <option>Loading roles...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>City</label>
+        <select id="p-city" onchange="window.updatePrediction()">
+          <option>Loading cities...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Experience: <span id="exp-label">2</span> years</label>
+        <input type="range" id="p-exp" min="0" max="15" value="2"
+               oninput="document.getElementById('exp-label').textContent=this.value; window.updatePrediction()"/>
+      </div>
+      <div class="field">
+        <label>Top Skill</label>
+        <select id="p-skill" onchange="window.updatePrediction()">
+          <option>Loading skills...</option>
+        </select>
+      </div>
+      <div class="formula-box" id="formula-box">
+        Salary = Role Baseline × City Multiplier × Experience Factor × Skill Bonus
+      </div>
+    </div>
+    <div class="pred-result" id="pred-result">
+      <div class="pred-placeholder">← Fill your profile to see prediction</div>
+    </div>
+  </div>
+  <div class="analyst-note">
+    <span class="tag">Model Note</span>
+    <strong>This is a rule-based model, not a trained ML model.</strong> The baselines and multipliers come directly from averaging our <span id="rowCount2">...</span>-row dataset grouped by role and city. It's transparent and explainable — which is actually more valuable than a black-box model for this dataset size.
+  </div>
+  <button class="learn-toggle" onclick="toggleLearn('l2')">📖 Rule-based vs ML models — when to use which?</button>
+  <div class="learn-box" id="l2">
+    <strong>Rule-based models</strong> use explicit logic derived from domain knowledge or data averages. They're interpretable, fast, and work well with small datasets.<br/><br/>
+    <strong>ML models</strong> learn patterns automatically. They outperform rule-based when: (1) you have enough data (1000+ rows), (2) relationships are non-linear, (3) there are many interacting features.<br/><br/>
+    With a limited number of unique salary values, an ML model here would <em>overfit</em>. The honest choice is the rule-based approach with a clear caveat.
+  </div>
+</div>
+
+<!-- SECTION 3 — LINEAR REGRESSION -->
+<div class="section anim" style="animation-delay:.2s">
+  <div class="section-label"><span class="section-num">03</span> Linear Regression — Experience vs Salary</div>
+  <div class="grid-32">
+    <div class="card">
+      <div class="card-title">Scatter plot + regression line</div>
+      <canvas id="regressionChart" height="260"></canvas>
+      <div class="reg-stats" id="reg-stats">
+        <div class="loading-inline"><div class="spinner-sm"></div>Calculating...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">What the numbers say</div>
+      <p style="font-size:.83rem;color:var(--muted);line-height:1.8;margin-bottom:1rem;">
+        Slope = <strong style="color:var(--teal)" id="slope-display">—</strong>. R² = <strong style="color:var(--warn)" id="r2-display">—</strong> — experience explains very little salary variation. The model is essentially useless for prediction alone.
+      </p>
+      <p style="font-size:.83rem;color:var(--muted);line-height:1.8;">
+        <strong style="color:var(--accent)">But this is the insight:</strong> salary is determined almost entirely by <em>role category</em>, not experience. That's a real finding, not a failure.
+      </p>
+      <div class="analyst-note" style="margin-top:1rem;padding:.85rem 1rem;">
+        <span class="tag">Interview Gold</span>
+        <strong>"My R² was low — walk me through your diagnosis."</strong> Low R² told me experience isn't the driver. I investigated and found salary is clustered by job title — a data granularity limitation from the API, not a modelling error.
+      </div>
+      <button class="learn-toggle" onclick="toggleLearn('l3')">📖 How is a regression line calculated?</button>
+      <div class="learn-box" id="l3">
+        <strong>OLS</strong> finds the line minimising squared residuals.<br/><br/>
+        <code>slope (β₁) = Σ(x - x̄)(y - ȳ) / Σ(x - x̄)²</code><br/>
+        <code>intercept (β₀) = ȳ - β₁ × x̄</code><br/><br/>
+        <strong>R²</strong> = 1 - (SS_residual / SS_total). 1 = perfect fit. 0 = explains nothing.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4 — FEATURE IMPORTANCE -->
+<div class="section anim" style="animation-delay:.22s">
+  <div class="section-label"><span class="section-num">04</span> Feature Importance — What Actually Drives Salary?</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Variance explained by each feature</div>
+      <div id="fi-bars" style="margin-top:.5rem;">
+        <div class="loading-inline"><div class="spinner-sm"></div>Computing variance decomposition...</div>
+      </div>
+      <div class="analyst-note">
+        <span class="tag">Key Finding</span>
+        Role is by far the strongest predictor. City adds on top. <em>Title negotiation matters more than location choice for salary maximisation.</em>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Salary range by role — from real data</div>
+      <div id="role-range-bars">
+        <div class="loading-inline"><div class="spinner-sm"></div>Loading from database...</div>
+      </div>
+      <button class="learn-toggle" onclick="toggleLearn('l4')">📖 What is feature importance?</button>
+      <div class="learn-box" id="l4">
+        <strong>Feature importance</strong> measures how much each input variable contributes to predictions. Here we use <strong>variance decomposition</strong> — how much of total salary variance is attributed to role vs city vs experience. A simplified but interview-valid method.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 5 — DISTRIBUTION ANALYSIS -->
+<div class="section anim" style="animation-delay:.25s">
+  <div class="section-label"><span class="section-num">05</span> Distribution Analysis — Shape of the Data</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Salary histogram — frequency distribution</div>
+      <canvas id="distChart" height="200"></canvas>
+      <div class="dist-label">₹ Salary in LPA — count per bucket</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Box plot — five-number summary</div>
+      <div class="boxplot-wrap" id="boxplot"></div>
+      <div class="bp-labels" id="bp-labels"></div>
+      <div style="margin-top:1.25rem;">
+        <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:.75rem;">Five-number summary</div>
+        <div id="five-num" style="display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;text-align:center;"></div>
+      </div>
+      <button class="learn-toggle" onclick="toggleLearn('l5')">📖 How to read a box plot?</button>
+      <div class="learn-box" id="l5">
+        Box plot shows: <strong>Min</strong>, <strong>Q1</strong> (25th pct), <strong>Median</strong>, <strong>Q3</strong> (75th pct), <strong>Max</strong>.<br/><br/>
+        <strong>IQR = Q3 - Q1</strong>. A very narrow box means most roles pay the same — only role type creates separation.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 6 — HYPOTHESIS TESTING -->
+<div class="section anim" style="animation-delay:.28s">
+  <div class="section-label"><span class="section-num">06</span> Hypothesis Testing — Do Data Engineers Earn More?</div>
+  <div class="grid-2">
+    <div class="hyp-card">
+      <div class="card-title">Test 1: Data Engineers vs Everyone Else</div>
+      <div class="hyp-statement">
+        <strong>H₀:</strong> Data Engineers earn the same as other roles.<br/>
+        <strong>H₁:</strong> Data Engineers earn significantly more.<br/>
+        <strong>α:</strong> 0.05
+      </div>
+      <div id="hyp1-result"><div class="loading-inline"><div class="spinner-sm"></div>Running Z-test...</div></div>
+      <button class="learn-toggle" onclick="toggleLearn('l6a')">📖 What is a hypothesis test?</button>
+      <div class="learn-box" id="l6a">
+        Hypothesis testing asks: "Could this difference have happened by chance?" The <strong>p-value</strong> is the probability of seeing this result if H₀ were true. p &lt; 0.05 → reject H₀.
+      </div>
+    </div>
+    <div class="hyp-card">
+      <div class="card-title">Test 2: Bangalore vs Other Cities</div>
+      <div class="hyp-statement">
+        <strong>H₀:</strong> Bangalore salaries are not significantly different from other cities.<br/>
+        <strong>H₁:</strong> Bangalore offers significantly different salaries.<br/>
+        <strong>α:</strong> 0.05
+      </div>
+      <div id="hyp2-result"><div class="loading-inline"><div class="spinner-sm"></div>Running Z-test...</div></div>
+      <button class="learn-toggle" onclick="toggleLearn('l6b')">📖 Z-test vs T-test?</button>
+      <div class="learn-box" id="l6b">
+        <strong>Z-test:</strong> n &gt; 30, population std known. <strong>T-test:</strong> n &lt; 30 or std unknown.<br/><br/>
+        Formula: <code>Z = (x̄₁ - x̄₂) / SE</code> where <code>SE = √(σ₁²/n₁ + σ₂²/n₂)</code>
+      </div>
+    </div>
+  </div>
+  <div class="analyst-note">
+    <span class="tag">Interview Answer</span>
+    <strong>"Have you done hypothesis testing?"</strong> — Yes. I tested whether Data Engineers earn significantly more. Large Z-statistic, p &lt; 0.001 — rejected the null at 99% confidence. I also tested Bangalore vs other cities and found no significant difference — role matters more than location.
+  </div>
+</div>
+
+<!-- SECTION 7 — MODEL EVALUATION -->
+<div class="section anim" style="animation-delay:.3s">
+  <div class="section-label"><span class="section-num">07</span> Model Evaluation — How Good Is Our Predictor?</div>
+  <div class="grid-3" id="eval-grid">
+    <div class="loading-inline" style="grid-column:1/-1"><div class="spinner-sm"></div>Evaluating model against real data...</div>
+  </div>
+  <div class="grid-2" style="margin-top:1rem;">
+    <div class="card">
+      <div class="card-title">Actual vs Predicted — Rule-Based Model</div>
+      <canvas id="actualVsPred" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Common interview questions</div>
+      <div class="interview-q"><span class="iq-icon">Q</span>"What's the difference between MAE and RMSE?" — MAE treats all errors equally. RMSE penalises large errors more. Use RMSE when large errors are costly; MAE for interpretable average error.</div>
+      <div class="interview-q"><span class="iq-icon">Q</span>"Your R² is low — is your model useless?" — Not necessarily. Low R² told me experience isn't the driver. Role category explains ~72% of variance — that's the real finding.</div>
+      <div class="interview-q"><span class="iq-icon">Q</span>"How would you improve this model?" — Get individually-reported salaries from Glassdoor/AmbitionBox. Add features: company size, skills count, remote vs on-site. With richer data, use Linear Regression or Gradient Boosting.</div>
+      <button class="learn-toggle" onclick="toggleLearn('l7')">📖 MAE, RMSE, R² — plain English</button>
+      <div class="learn-box" id="l7">
+        <strong>MAE</strong> = average |actual - predicted|. Easy to interpret.<br/><br/>
+        <strong>RMSE</strong> = √(avg (actual - predicted)²). Higher than MAE, penalises big mistakes.<br/><br/>
+        <strong>R²</strong>: 0.9+ great, 0.5–0.9 acceptable, below 0.5 weak.
+      </div>
+    </div>
+  </div>
+  <div class="analyst-note">
+    <span class="tag">The Honest Takeaway</span>
+    <strong>A good analyst knows when their model is limited — and says so clearly.</strong> The rule-based predictor works well for role-level estimation. The regression fails because of data granularity — a data problem, not a model problem. Knowing the difference is what separates a junior from a good analyst.
+  </div>
+</div>
+
+</main>
+<footer>
+  <span>◈ JobWhiz Lab · Predictive Analytics</span>
+  <span id="footer-note">Loading market data…</span>
+</footer>
+
+<script type="module" src="js/sml.js"></script>
+</body>
+</html>

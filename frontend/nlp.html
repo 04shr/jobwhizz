@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JobWhiz Lab · Diagnostic Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#0a0c10;--surface:#111318;--surface2:#161921;--border:#1e2230;--border2:#252a3a;--accent:#00e5a0;--accent2:#4f8bff;--warn:#ffb340;--danger:#ff4f6b;--purple:#b57bee;--text:#e8eaf0;--muted:#907e98;--muted2:#7e899b;--font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;--font-body:'Instrument Sans',sans-serif;--r:10px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.025;pointer-events:none;z-index:0;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 2.5rem;height:60px;background:rgba(10,12,16,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.nav-logo{font-family:var(--font-head);font-weight:800;font-size:1.05rem;color:var(--accent);letter-spacing:-.02em;text-decoration:none;}
+.nav-logo span{color:var(--text);}
+.nav-links{display:flex;gap:.2rem;list-style:none;}
+.nav-links a{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);text-decoration:none;padding:.38rem .8rem;border-radius:6px;border:1px solid transparent;transition:all .18s;cursor:pointer;}
+.nav-links a:hover,.nav-links a.active{color:var(--accent);border-color:rgba(0,229,160,.3);background:rgba(0,229,160,.05);}
+.api-pill{display:flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.65rem;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.api-dot.live{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── LAYOUT ── */
+main{padding-top:60px;position:relative;z-index:1;}
+.page-header{padding:3.5rem 2.5rem 0;max-width:1200px;margin:0 auto;}
+.page-tag{font-family:var(--font-mono);font-size:.65rem;color:var(--purple);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+.page-tag::before{content:'';display:block;width:20px;height:1px;background:var(--purple);}
+.page-header h1{font-family:var(--font-head);font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:.75rem;}
+.page-header h1 em{font-style:normal;color:var(--purple);}
+.page-header p{font-size:.9rem;color:var(--muted);max-width:580px;line-height:1.75;}
+.section{max-width:1200px;margin:0 auto;padding:2.5rem 2.5rem 0;}
+.section-label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.section-num{font-family:var(--font-mono);font-size:.62rem;color:var(--muted2);margin-right:.25rem;}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;}
+.card-title{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.25rem;}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--surface2);}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--purple);background:rgba(181,123,238,.04);}
+.upload-zone.has-file{border-color:var(--accent);border-style:solid;background:rgba(0,229,160,.03);}
+.upload-icon{font-size:2.5rem;margin-bottom:1rem;display:block;}
+.upload-zone h3{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:.5rem;}
+.upload-zone p{font-size:.82rem;color:var(--muted);line-height:1.6;}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.file-info{display:none;align-items:center;gap:.75rem;font-family:var(--font-mono);font-size:.75rem;margin-top:1.25rem;padding:.75rem 1rem;background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:8px;}
+.file-info.show{display:flex;}
+
+/* ── PARSED PREVIEW ── */
+.parsed-card{display:none;background:var(--surface2);border:1px solid rgba(181,123,238,.25);border-radius:var(--r);padding:1.25rem;margin-top:1rem;}
+.parsed-card.show{display:block;animation:fadeUp .3s ease;}
+.parsed-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:.74rem;}
+.parsed-row:last-child{border-bottom:none;}
+.parsed-key{color:var(--muted);}
+.parsed-val{color:var(--text);font-weight:500;}
+
+/* ── TONE SELECTOR ── */
+.tone-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem;}
+@media(max-width:700px){.tone-grid{grid-template-columns:repeat(2,1fr);}}
+.tone-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer;transition:all .2s;text-align:center;}
+.tone-btn:hover{border-color:var(--border2);transform:translateY(-1px);}
+.tone-btn.active{transform:translateY(-2px);}
+.tone-btn.active.normal{border-color:var(--accent2);background:rgba(79,139,255,.07);}
+.tone-btn.active.roast{border-color:var(--danger);background:rgba(255,79,107,.07);}
+.tone-btn.active.hype{border-color:var(--warn);background:rgba(255,179,64,.07);}
+.tone-btn.active.interviewer{border-color:var(--purple);background:rgba(181,123,238,.07);}
+.tone-emoji{font-size:1.6rem;display:block;margin-bottom:.5rem;}
+.tone-name{font-family:var(--font-head);font-size:.82rem;font-weight:700;display:block;margin-bottom:.2rem;}
+.tone-desc{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);line-height:1.4;}
+.tone-btn.normal .tone-name{color:var(--accent2);}
+.tone-btn.roast .tone-name{color:var(--danger);}
+.tone-btn.hype .tone-name{color:var(--warn);}
+.tone-btn.interviewer .tone-name{color:var(--purple);}
+
+/* ── JD MATCHES ── */
+.jd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+.jd-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;cursor:pointer;transition:all .2s;position:relative;}
+.jd-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.jd-card.selected{border-color:var(--accent);background:rgba(0,229,160,.04);}
+.jd-card.selected::after{content:'✓';position:absolute;top:.75rem;right:.75rem;font-family:var(--font-mono);font-size:.7rem;color:var(--accent);}
+.jd-title{font-family:var(--font-head);font-size:.88rem;font-weight:700;margin-bottom:.3rem;line-height:1.3;}
+.jd-company{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-bottom:.6rem;}
+.jd-meta{display:flex;gap:.5rem;flex-wrap:wrap;}
+.jd-tag{font-family:var(--font-mono);font-size:.6rem;padding:.15rem .5rem;border-radius:4px;background:rgba(79,139,255,.08);color:var(--accent2);border:1px solid rgba(79,139,255,.15);}
+.jd-tag.green{background:rgba(0,229,160,.08);color:var(--accent);border-color:rgba(0,229,160,.15);}
+
+/* ── ANALYSE BUTTON ── */
+.analyse-btn{width:100%;padding:1rem;font-family:var(--font-head);font-size:1rem;font-weight:700;letter-spacing:.02em;border:none;border-radius:var(--r);cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.analyse-btn:disabled{opacity:.5;cursor:not-allowed;}
+.analyse-btn.normal-btn{background:var(--accent2);color:#fff;}
+.analyse-btn.roast-btn{background:var(--danger);color:#fff;}
+.analyse-btn.hype-btn{background:var(--warn);color:#000;}
+.analyse-btn.interviewer-btn{background:var(--purple);color:#fff;}
+.analyse-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+
+/* ── LOADING STATE ── */
+.loading-state{display:none;text-align:center;padding:3rem;}
+.loading-state.show{display:block;}
+.loading-ring{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1.25rem;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);}
+.loading-subtext{font-size:.72rem;color:var(--muted2);margin-top:.4rem;}
+
+/* ── RESULTS ── */
+.results-panel{display:none;}
+.results-panel.show{display:block;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SCORE RING ── */
+.score-header{display:flex;align-items:center;gap:2rem;padding:2rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1.25rem;flex-wrap:wrap;}
+.score-ring-wrap{position:relative;width:110px;height:110px;flex-shrink:0;}
+.score-ring-wrap canvas{position:absolute;inset:0;}
+.score-ring-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-num{font-family:var(--font-head);font-size:1.8rem;font-weight:800;line-height:1;}
+.score-label{font-family:var(--font-mono);font-size:.55rem;color:var(--muted);margin-top:.2rem;}
+.score-meta{flex:1;}
+.score-role{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem;}
+.score-oneliner{font-family:var(--font-head);font-size:1.15rem;font-weight:700;line-height:1.3;margin-bottom:.75rem;}
+.score-summary{font-size:.85rem;color:var(--muted);line-height:1.75;}
+
+/* ── PROS / CONS ── */
+.pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+@media(max-width:600px){.pros-cons{grid-template-columns:1fr;}}
+.pros-box{background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.2);border-radius:var(--r);padding:1.25rem;}
+.cons-box{background:rgba(255,79,107,.04);border:1px solid rgba(255,79,107,.2);border-radius:var(--r);padding:1.25rem;}
+.pc-title{font-family:var(--font-mono);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.9rem;display:flex;align-items:center;gap:.4rem;}
+.pros-box .pc-title{color:var(--accent);}
+.cons-box .pc-title{color:var(--danger);}
+.pc-item{display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.6rem;font-size:.82rem;color:var(--muted);line-height:1.5;}
+.pc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:.4rem;}
+.pros-box .pc-dot{background:var(--accent);}
+.cons-box .pc-dot{background:var(--danger);}
+
+/* ── SKILLS CHIPS ── */
+.chip-section{margin-bottom:1rem;}
+.chip-title{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.65rem;}
+.chip{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--font-mono);font-size:.68rem;padding:.28rem .7rem;border-radius:999px;margin:.2rem;}
+.chip-match{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--accent);}
+.chip-miss{background:rgba(255,179,64,.1);border:1px solid rgba(255,179,64,.25);color:var(--warn);}
+.chip-flag{background:rgba(255,79,107,.1);border:1px solid rgba(255,79,107,.25);color:var(--danger);}
+
+/* ── ACTION ITEMS ── */
+.action-list{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;}
+.action-item{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem 0;border-bottom:1px solid var(--border);font-size:.84rem;color:var(--muted);line-height:1.5;}
+.action-item:last-child{border-bottom:none;}
+.action-num{font-family:var(--font-mono);font-size:.65rem;color:var(--accent2);background:rgba(79,139,255,.1);border:1px solid rgba(79,139,255,.2);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* ── ANALYST NOTE ── */
+.analyst-note{background:rgba(181,123,238,.04);border:1px solid rgba(181,123,238,.15);border-left:3px solid var(--purple);border-radius:0 var(--r) var(--r) 0;padding:1rem 1.25rem;margin-top:1.25rem;font-size:.8rem;line-height:1.7;color:var(--muted);}
+.analyst-note strong{color:var(--text);}
+.analyst-note .tag{display:inline-block;font-family:var(--font-mono);font-size:.6rem;padding:.15rem .5rem;border-radius:4px;background:rgba(181,123,238,.1);color:var(--purple);border:1px solid rgba(181,123,238,.2);margin-right:.4rem;}
+
+/* ── LEARN BOX ── */
+.learn-toggle{font-family:var(--font-mono);font-size:.65rem;color:var(--accent2);cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;margin-top:1rem;border:none;background:none;padding:0;}
+.learn-box{display:none;background:rgba(79,139,255,.04);border:1px solid rgba(79,139,255,.15);border-radius:var(--r);padding:1rem 1.25rem;margin-top:.75rem;font-size:.8rem;color:var(--muted);line-height:1.75;}
+.learn-box.open{display:block;animation:fadeUp .25s ease;}
+.learn-box strong{color:var(--text);}
+
+/* ── BAR CHART ── */
+.bar-list{display:flex;flex-direction:column;gap:.55rem;}
+.bar-row{display:grid;grid-template-columns:110px 1fr 48px;align-items:center;gap:.75rem;}
+.bar-label{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{height:7px;background:var(--border);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+.bar-val{font-family:var(--font-mono);font-size:.66rem;color:var(--text);}
+
+/* ── MISC ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:768px){.grid-2{grid-template-columns:1fr;}}
+.loading-inline{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.72rem;color:var(--muted);padding:1rem 0;}
+.spinner-sm{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+footer{border-top:1px solid var(--border);padding:1.5rem 2.5rem;margin-top:4rem;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.63rem;color:var(--muted);flex-wrap:wrap;gap:.5rem;position:relative;z-index:1;}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:slideUp .5s ease forwards;}
+::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">◈ Job<span>Whiz</span> Lab</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="index.html">Dashboard</a></li>
+    <li><a href="eda.html">EDA</a></li>
+    <li><a class="active">NLP</a></li>
+    <li><a href="sml.html">SML</a></li>
+    <li><a href="dss.html"  id="nav-dss">DSS</a></li>
+  </ul>
+  <div class="api-pill">
+    <div class="api-dot" id="apiDot"></div>
+    <span id="apiLabel">Connecting...</span>
+  </div>
+</nav>
+
+<main>
+
+<!-- ── PAGE HEADER ── -->
+<div class="page-header anim" style="animation-delay:.05s">
+  <div class="page-tag">02 · Diagnostic Analytics</div>
+  <h1>Why do some resumes<br/>get <em>shortlisted</em>?</h1>
+  <p>Upload your resume. We parse it, find the best matching jobs from our live database, then use AI to evaluate your fit — in whatever tone you can handle.</p>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 1 — UPLOAD RESUME
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.1s">
+  <div class="section-label"><span class="section-num">01</span> Upload Your Resume</div>
+
+  <div class="grid-2">
+    <div>
+      <div class="upload-zone" id="uploadZone">
+        <span class="upload-icon">📄</span>
+        <h3>Drop your resume here</h3>
+        <p>Supports PDF, DOCX, or TXT<br/>Max 5MB · Text is extracted client-side</p>
+        <input type="file" id="resumeFile" accept=".pdf,.doc,.docx,.txt" onchange="handleFileUpload(this)"/>
+      </div>
+
+      <div class="file-info" id="fileInfo">
+        <span style="font-size:1.2rem;">✅</span>
+        <div>
+          <div id="fileName" style="color:var(--accent)">file.pdf</div>
+          <div id="fileSize" style="color:var(--muted);font-size:.65rem">0 KB · Text extracted</div>
+        </div>
+        <button onclick="clearFile()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;font-family:var(--font-mono)">✕ Clear</button>
+      </div>
+
+      <!-- Parsed preview -->
+      <div class="parsed-card" id="parsedCard">
+        <div class="card-title" style="margin-bottom:.75rem;">📋 Resume Parsed</div>
+        <div id="parsedContent"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Or paste resume text directly</div>
+      <textarea id="resumePaste" placeholder="Paste your resume text here if you don't want to upload a file..." style="width:100%;min-height:220px;background:#0d0f15;border:1px solid var(--border);border-radius:8px;padding:1rem;color:var(--text);font-family:var(--font-mono);font-size:.76rem;line-height:1.7;resize:vertical;outline:none;transition:border-color .2s;" onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+      <button onclick="parseResumeText()" style="margin-top:.75rem;width:100%;padding:.6rem;font-family:var(--font-mono);font-size:.72rem;background:rgba(181,123,238,.1);border:1px solid rgba(181,123,238,.3);color:var(--purple);border-radius:8px;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(181,123,238,.2)'" onmouseout="this.style.background='rgba(181,123,238,.1)'">
+        Parse Text →
+      </button>
+    </div>
+  </div>
+
+  <div class="analyst-note">
+    <span class="tag">How it works</span>
+    <strong>Your resume never leaves your browser for parsing.</strong> Text is extracted client-side, then sent to our FastAPI backend which forwards it to Groq's LLM API for analysis. We match your skills against <span id="rowCount">...</span> job listings in our MySQL database to find the most relevant JDs before evaluation.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 2 — MATCHED JDs
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.15s" id="jdSection" style="display:none">
+  <div class="section-label"><span class="section-num">02</span> Matching Jobs from Database</div>
+
+  <div id="jdMatchesWrap">
+    <div class="loading-inline"><div class="spinner-sm"></div>Finding best matches from your database...</div>
+  </div>
+
+  <p style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);margin-top:.75rem;">
+    👆 Select a job to evaluate your resume against. The analysis is specific to that JD.
+  </p>
+
+  <button class="learn-toggle" onclick="toggleLearn('learn-diag')">📖 What is Diagnostic Analytics?</button>
+  <div class="learn-box" id="learn-diag">
+    <strong>Diagnostic Analytics</strong> answers "why did this happen?" — not just what happened (that's Descriptive). Here we're asking: <em>why does this resume get shortlisted or rejected?</em> We diagnose the gap between your profile and what employers actually need, using real JD data from the market. This is the analytical layer that turns raw data into actionable decisions.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 3 — CHOOSE YOUR TONE
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.2s" id="toneSection">
+  <div class="section-label"><span class="section-num">03</span> Choose Evaluation Mode</div>
+
+  <div class="tone-grid">
+    <div class="tone-btn normal active" onclick="selectTone('normal', this)">
+      <span class="tone-emoji">🎯</span>
+      <span class="tone-name">Professional</span>
+      <span class="tone-desc">Balanced, objective ATS-style review</span>
+    </div>
+    <div class="tone-btn roast" onclick="selectTone('roast', this)">
+      <span class="tone-emoji">🔥</span>
+      <span class="tone-name">Roast Me</span>
+      <span class="tone-desc">Savage but secretly helpful. Brace yourself.</span>
+    </div>
+    <div class="tone-btn hype" onclick="selectTone('hype', this)">
+      <span class="tone-emoji">🚀</span>
+      <span class="tone-name">Hype Mode</span>
+      <span class="tone-desc">Maximum positivity. We find the wins.</span>
+    </div>
+    <div class="tone-btn interviewer" onclick="selectTone('interviewer', this)">
+      <span class="tone-emoji">😤</span>
+      <span class="tone-name">FAANG Interviewer</span>
+      <span class="tone-desc">Tough, technical, demanding. No mercy.</span>
+    </div>
+  </div>
+
+  <button class="analyse-btn normal-btn" id="analyseBtn" onclick="analyseResume()" disabled>
+    🔍 Analyse Resume
+  </button>
+
+  <button class="learn-toggle" onclick="toggleLearn('learn-ats')">📖 What is an ATS?</button>
+  <div class="learn-box" id="learn-ats">
+    <strong>Applicant Tracking System (ATS)</strong> — Software used by 99% of large companies to filter resumes before a human sees them. It scans for keyword matches, formatting compliance, and skill alignment against the JD. A resume can be perfectly written and still get rejected by ATS if it doesn't use the right keywords. This tool simulates that process using an LLM.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 4 — ANALYSIS RESULTS
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.25s;padding-bottom:1rem">
+  <div class="section-label"><span class="section-num">04</span> Analysis Results</div>
+
+  <!-- Loading state -->
+  <div class="loading-state" id="loadingState">
+    <div class="loading-ring" id="loadingRing"></div>
+    <div class="loading-text" id="loadingText">Analysing your resume with Groq AI...</div>
+    <div class="loading-subtext" id="loadingSubtext">Comparing against selected job description</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-panel" id="resultsPanel">
+
+    <!-- Score header -->
+    <div class="score-header">
+      <div class="score-ring-wrap">
+        <canvas id="scoreRing" width="110" height="110"></canvas>
+        <div class="score-ring-val">
+          <div class="score-num" id="scoreNum">—</div>
+          <div class="score-label">ATS SCORE</div>
+        </div>
+      </div>
+      <div class="score-meta">
+        <div class="score-role" id="scoreRole">Detecting role...</div>
+        <div class="score-oneliner" id="scoreOneliner">—</div>
+        <div class="score-summary" id="scoreSummary">—</div>
+      </div>
+    </div>
+
+    <!-- Pros / Cons -->
+    <div class="pros-cons">
+      <div class="pros-box">
+        <div class="pc-title">✓ Strengths</div>
+        <div id="prosList"></div>
+      </div>
+      <div class="cons-box">
+        <div class="pc-title">✗ Weaknesses</div>
+        <div id="consList"></div>
+      </div>
+    </div>
+
+    <!-- Skills -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+      <div class="chip-section card">
+        <div class="chip-title">✅ Skills Matched</div>
+        <div id="matchedChips"></div>
+      </div>
+      <div class="chip-section card">
+        <div class="chip-title">⚠️ Missing Skills</div>
+        <div id="missingChips"></div>
+      </div>
+    </div>
+
+    <!-- ATS Flags -->
+    <div class="card" style="margin-bottom:1rem;" id="atsFlagsCard">
+      <div class="card-title">🚩 ATS Red Flags</div>
+      <div id="atsFlags"></div>
+    </div>
+
+    <!-- Action items -->
+    <div class="action-list" id="actionList">
+      <div class="card-title" style="margin-bottom:.75rem;">⚡ Action Items — Fix These First</div>
+      <div id="actionItems"></div>
+    </div>
+
+    <!-- Re-analyse with different tone -->
+    <div style="margin-top:1.25rem;padding:1.25rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);">
+      <div style="font-family:var(--font-mono);font-size:.68rem;color:var(--muted);margin-bottom:.75rem;letter-spacing:.06em;text-transform:uppercase;">Try a different mode</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button onclick="quickRetone('normal')"    style="font-family:var(--font-mono);font-size:.68rem;padding:.4rem .9rem;border-radius:6px;border:1px solid rgba(79,139,255,.3);background:rgba(79,139,255,.08);color:var(--accent2);cursor:pointer;">🎯 Professional</button>
+        <button onclick="quickRetone('roast')"     style="font-family:var(--font-mono);font-size:.68rem;padding:.4rem .9rem;border-radius:6px;border:1px solid rgba(255,79,107,.3);background:rgba(255,79,107,.08);color:var(--danger);cursor:pointer;">🔥 Roast Me</button>
+        <button onclick="quickRetone('hype')"      style="font-family:var(--font-mono);font-size:.68rem;padding:.4rem .9rem;border-radius:6px;border:1px solid rgba(255,179,64,.3);background:rgba(255,179,64,.08);color:var(--warn);cursor:pointer;">🚀 Hype Mode</button>
+        <button onclick="quickRetone('interviewer')" style="font-family:var(--font-mono);font-size:.68rem;padding:.4rem .9rem;border-radius:6px;border:1px solid rgba(181,123,238,.3);background:rgba(181,123,238,.08);color:var(--purple);cursor:pointer;">😤 FAANG Interviewer</button>
+      </div>
+    </div>
+
+    <div class="analyst-note" style="margin-top:1.25rem;">
+      <span class="tag">Analyst Note</span>
+      <strong>This is diagnostic analytics in action.</strong> We're not just describing what's in your resume — we're diagnosing <em>why</em> it may or may not get shortlisted for this specific role. The match score is calculated by comparing your extracted skills against the JD's requirements. The tone changes the framing, not the underlying analysis. In a real ATS, keyword density and formatting compliance are the primary filters.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SECTION 5 — SKILL FREQUENCY FROM DB
+════════════════════════════════════════════ -->
+<div class="section anim" style="animation-delay:.28s;padding-bottom:3rem;">
+  <div class="section-label"><span class="section-num">05</span> Market Skill Frequency — What Employers Actually Want</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Top skills across all job listings</div>
+      <div class="bar-list" id="skillFreqBars">
+        <div class="loading-inline"><div class="spinner-sm"></div>Loading...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top skills by role</div>
+      <div id="skillsByRoleWrap">
+        <div class="loading-inline"><div class="spinner-sm"></div>Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <span>◈ JobWhiz Lab · Diagnostic Analytics</span>
+  <span>Groq LLaMA3 · Live MySQL · <span id="rowCount">...</span> Jobs</span>
+</footer>
+
+
+<script>
+const API = 'http://127.0.0.1:8000';
+
+// ── STATE ──────────────────────────────────────────────────────
+let resumeText    = '';
+let selectedJD    = null;
+let selectedTone  = 'normal';
+let scoreRingInst = null;
+let parsedData    = null;
+
+// ── HELPERS ───────────────────────────────────────────────────
+async function post(endpoint, formData) {
+  const r = await fetch(API + endpoint, { method: 'POST', body: formData });
+  if (!r.ok) { const err = await r.json(); throw new Error(err.detail || 'API error'); }
+  return r.json();
+}
+async function get(ep) {
+  const r = await fetch(API + ep);
+  if (!r.ok) throw new Error(ep);
+  return r.json();
+}
+function toggleLearn(id) {
+  const box = document.getElementById(id);
+  box.classList.toggle('open');
+}
+
+// ── FILE UPLOAD ────────────────────────────────────────────────
+async function handleFileUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB · Extracting...';
+  document.getElementById('fileInfo').classList.add('show');
+  document.getElementById('uploadZone').classList.add('has-file');
+
+  // TXT — read directly in browser
+  if (file.name.toLowerCase().endsWith('.txt')) {
+    resumeText = await file.text();
+    document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB · Ready';
+    await parseResumeAndMatch();
+    return;
+  }
+
+  // PDF — send to backend for proper pdfplumber extraction
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    document.getElementById('parsedCard').classList.add('show');
+    document.getElementById('parsedContent').innerHTML = '<div class="loading-inline"><div class="spinner-sm"></div>Extracting PDF text on server...</div>';
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch(API + '/api/nlp/extract-pdf', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (!r.ok) {
+        document.getElementById('parsedContent').innerHTML = `<p style="font-family:var(--font-mono);font-size:.75rem;color:var(--warn);">⚠️ ${data.detail}<br/><br/><span style="color:var(--muted)">Please paste your resume text in the box on the right instead.</span></p>`;
+        return;
+      }
+      resumeText = data.text;
+      document.getElementById('fileSize').textContent = `${(file.size/1024).toFixed(1)} KB · ${data.pages} page${data.pages>1?'s':''} · ${data.char_count} chars extracted`;
+      await parseResumeAndMatch();
+    } catch (e) {
+      document.getElementById('parsedContent').innerHTML = `<p style="font-family:var(--font-mono);font-size:.72rem;color:var(--danger);">Extraction failed: ${e.message}</p>`;
+    }
+    return;
+  }
+
+  alert('Please upload a PDF or TXT. For DOCX, paste your resume text instead.');
+}
+
+function clearFile() {
+  resumeText = '';
+  selectedJD = null;
+  parsedData = null;
+  document.getElementById('resumeFile').value = '';
+  document.getElementById('fileInfo').classList.remove('show');
+  document.getElementById('uploadZone').classList.remove('has-file');
+  document.getElementById('parsedCard').classList.remove('show');
+  document.getElementById('jdMatchesWrap').innerHTML = '<div class="loading-inline"><div class="spinner-sm"></div>Finding best matches...</div>';
+  document.getElementById('analyseBtn').disabled = true;
+  document.getElementById('resultsPanel').classList.remove('show');
+  document.getElementById('loadingState').classList.remove('show');
+}
+
+async function parseResumeText() {
+  const text = document.getElementById('resumePaste').value.trim();
+  if (!text) { alert('Please paste some resume text first.'); return; }
+  resumeText = text;
+  await parseResumeAndMatch();
+}
+
+// ── PARSE + MATCH ──────────────────────────────────────────────
+async function parseResumeAndMatch() {
+  if (!resumeText || resumeText.length < 50) {
+    alert('Could not extract enough text. For PDFs, please use the paste option and copy-paste your resume text.');
+    return;
+  }
+
+  // Show parsed card loading
+  document.getElementById('parsedCard').classList.add('show');
+  document.getElementById('parsedContent').innerHTML = '<div class="loading-inline"><div class="spinner-sm"></div>Parsing with Groq...</div>';
+
+  try {
+    // Step 1: Parse resume
+    const fd = new FormData();
+    fd.append('resume_text', resumeText);
+    parsedData = await post('/api/nlp/parse-resume', fd);
+
+    // Show parsed info
+    document.getElementById('parsedContent').innerHTML = `
+      <div class="parsed-row"><span class="parsed-key">Detected Role</span><span class="parsed-val" style="color:var(--purple)">${parsedData.detected_role}</span></div>
+      <div class="parsed-row"><span class="parsed-key">Experience</span><span class="parsed-val">${parsedData.years_experience} year${parsedData.years_experience !== 1 ? 's' : ''}</span></div>
+      <div class="parsed-row"><span class="parsed-key">Education</span><span class="parsed-val">${parsedData.education}</span></div>
+      <div class="parsed-row"><span class="parsed-key">Top Skills</span><span class="parsed-val">${parsedData.top_skills?.join(', ') || '—'}</span></div>
+      <div class="parsed-row" style="border:none"><span class="parsed-key">Summary</span><span class="parsed-val" style="font-size:.72rem;color:var(--muted);max-width:280px;text-align:right;">${parsedData.summary}</span></div>`;
+
+    // Step 2: Fetch matching JDs
+    document.getElementById('jdMatchesWrap').innerHTML = '<div class="loading-inline"><div class="spinner-sm"></div>Querying database for matching jobs...</div>';
+
+    const fd2 = new FormData();
+    fd2.append('role', parsedData.detected_role || '');
+    fd2.append('skills', parsedData.top_skills?.join(', ') || '');
+    const jds = await post('/api/nlp/match-jds', fd2);
+
+    renderJDMatches(jds);
+    updateAnalyseButton();
+
+  } catch (e) {
+    document.getElementById('parsedContent').innerHTML = `<p style="font-family:var(--font-mono);font-size:.72rem;color:var(--danger);">Error: ${e.message}</p>`;
+    console.error(e);
+  }
+}
+
+// ── RENDER JD MATCHES ─────────────────────────────────────────
+function renderJDMatches(jds) {
+  if (!jds?.length) {
+    document.getElementById('jdMatchesWrap').innerHTML = '<p style="font-family:var(--font-mono);font-size:.72rem;color:var(--muted);">No matching JDs found. Try a different role keyword.</p>';
+    return;
+  }
+
+  const html = `<div class="jd-grid">${jds.map((jd, i) => `
+    <div class="jd-card" onclick="selectJD(this, ${i})" data-idx="${i}" data-jd='${JSON.stringify(jd).replace(/'/g,"&#39;")}'>
+      <div class="jd-title">${jd.title}</div>
+      <div class="jd-company">${jd.company} · ${jd.city || 'India'}</div>
+      <div class="jd-meta">
+        <span class="jd-tag green">₹${jd.salary_avg}L avg</span>
+        <span class="jd-tag">${jd.experience_min ?? 0}–${jd.experience_max ?? '?'} yr exp</span>
+      </div>
+    </div>`).join('')}</div>`;
+
+  document.getElementById('jdMatchesWrap').innerHTML = html;
+
+  // Auto-select first
+  const first = document.querySelector('.jd-card');
+  if (first) { first.classList.add('selected'); selectedJD = jds[0]; }
+  updateAnalyseButton();
+}
+
+function selectJD(el, idx) {
+  document.querySelectorAll('.jd-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedJD = JSON.parse(el.dataset.jd);
+  updateAnalyseButton();
+}
+
+// ── TONE SELECTOR ─────────────────────────────────────────────
+function selectTone(tone, btn) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedTone = tone;
+
+  const btn2 = document.getElementById('analyseBtn');
+  btn2.className = `analyse-btn ${tone}-btn`;
+  const labels = { normal:'🎯 Analyse Resume', roast:'🔥 Roast My Resume', hype:'🚀 Hype Me Up', interviewer:'😤 Interview Me' };
+  btn2.textContent = labels[tone];
+}
+
+function updateAnalyseButton() {
+  const btn = document.getElementById('analyseBtn');
+  btn.disabled = !(resumeText && selectedJD);
+}
+
+// ── ANALYSE ───────────────────────────────────────────────────
+async function analyseResume() {
+  if (!resumeText || !selectedJD) return;
+
+  document.getElementById('resultsPanel').classList.remove('show');
+  document.getElementById('loadingState').classList.add('show');
+
+  const toneMessages = {
+    normal:      ['Analysing your resume...', 'Comparing against JD requirements...'],
+    roast:       ['Sharpening knives...', 'Preparing to absolutely destroy your resume...'],
+    hype:        ['Finding all your wins...', 'Building your confidence...'],
+    interviewer: ['Putting on stern face...', 'Preparing tough questions...'],
+  };
+  const msgs = toneMessages[selectedTone];
+  document.getElementById('loadingText').textContent    = msgs[0];
+  document.getElementById('loadingSubtext').textContent = msgs[1];
+
+  // Pulse ring color by tone
+  const ringColors = { normal:'#4f8bff', roast:'#ff4f6b', hype:'#ffb340', interviewer:'#b57bee' };
+  document.getElementById('loadingRing').style.borderTopColor = ringColors[selectedTone];
+
+  try {
+    const fd = new FormData();
+    fd.append('resume_text', resumeText);
+    fd.append('jd_text', selectedJD.description || JSON.stringify(selectedJD));
+    fd.append('tone', selectedTone);
+
+    const result = await post('/api/nlp/analyse-resume', fd);
+    renderResults(result);
+
+  } catch (e) {
+    document.getElementById('loadingState').classList.remove('show');
+    alert('Analysis failed: ' + e.message);
+  }
+}
+
+function quickRetone(tone) {
+  document.querySelectorAll('.tone-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.classList.contains(tone)) b.classList.add('active');
+  });
+  selectedTone = tone;
+  const btn = document.getElementById('analyseBtn');
+  btn.className = `analyse-btn ${tone}-btn`;
+  analyseResume();
+}
+
+// ── RENDER RESULTS ─────────────────────────────────────────────
+function renderResults(r) {
+  document.getElementById('loadingState').classList.remove('show');
+  document.getElementById('resultsPanel').classList.add('show');
+
+  // Score ring
+  const score = r.match_score ?? 0;
+  const toneColors = { normal:'#4f8bff', roast:'#ff4f6b', hype:'#ffb340', interviewer:'#b57bee' };
+  const col = toneColors[r.tone] || '#4f8bff';
+
+  document.getElementById('scoreNum').textContent = score;
+  document.getElementById('scoreNum').style.color = score >= 70 ? 'var(--accent)' : score >= 45 ? 'var(--warn)' : 'var(--danger)';
+  document.getElementById('scoreRole').textContent = r.detected_role || '—';
+  document.getElementById('scoreOneliner').textContent = r.one_liner || '—';
+  document.getElementById('scoreSummary').textContent = r.summary || '—';
+
+  // Doughnut ring
+  const canvas = document.getElementById('scoreRing');
+  if (scoreRingInst) scoreRingInst.destroy();
+  scoreRingInst = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [score, 100 - score],
+        backgroundColor: [col, 'rgba(30,34,48,1)'],
+        borderWidth: 0,
+        borderRadius: 4,
+      }]
+    },
+    options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 800 } }
+  });
+
+  // Pros
+  document.getElementById('prosList').innerHTML = (r.pros || []).map(p =>
+    `<div class="pc-item"><div class="pc-dot"></div><span>${p}</span></div>`).join('');
+
+  // Cons
+  document.getElementById('consList').innerHTML = (r.cons || []).map(c =>
+    `<div class="pc-item"><div class="pc-dot"></div><span>${c}</span></div>`).join('');
+
+  // Matched skills
+  document.getElementById('matchedChips').innerHTML = (r.matched_skills || []).map(s =>
+    `<span class="chip chip-match">✓ ${s}</span>`).join('');
+
+  // Missing skills
+  document.getElementById('missingChips').innerHTML = (r.missing_skills || []).map(s =>
+    `<span class="chip chip-miss">+ ${s}</span>`).join('');
+
+  // ATS flags
+  document.getElementById('atsFlags').innerHTML = (r.ats_flags || []).length
+    ? (r.ats_flags || []).map(f => `<span class="chip chip-flag" style="display:inline-flex;margin:.2rem;">⚑ ${f}</span>`).join('')
+    : '<p style="font-family:var(--font-mono);font-size:.72rem;color:var(--accent)">No major ATS flags detected ✓</p>';
+
+  // Action items
+  document.getElementById('actionItems').innerHTML = (r.action_items || []).map((a, i) =>
+    `<div class="action-item"><div class="action-num">${i + 1}</div><span>${a}</span></div>`).join('');
+
+  // Scroll to results
+  document.getElementById('resultsPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── SKILL FREQUENCY FROM DB ───────────────────────────────────
+const COLORS = ['#00e5a0','#4f8bff','#ffb340','#ff4f6b','#b57bee','#00d48a','#6ec6ff','#ffd080','#ff8a65','#a5d6a7'];
+
+function renderBars(id, data, lk, vk) {
+  const el = document.getElementById(id);
+  if (!el || !data?.length) return;
+  const max = Math.max(...data.map(d => +d[vk]));
+  el.innerHTML = data.map((d, i) => `
+    <div class="bar-row">
+      <div class="bar-label" title="${d[lk]}">${d[lk]}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:0%;background:${COLORS[i%COLORS.length]}" data-w="${(+d[vk]/max)*100}"></div></div>
+      <div class="bar-val">${d[vk]}</div>
+    </div>`).join('');
+  setTimeout(() => el.querySelectorAll('.bar-fill').forEach(b => b.style.width = b.dataset.w + '%'), 60);
+}
+
+async function loadSkillStats() {
+  try {
+    const skills = await get('/api/nlp/keyword-frequency');
+    renderBars('skillFreqBars', skills.slice(0,12), 'skill_name', 'frequency');
+  } catch(e) { console.warn('Skills:', e); }
+
+  try {
+    const byRole = await get('/api/skills/by-role');
+    const roles = [...new Set(byRole.map(d => d.role))].filter(r => r !== 'Other');
+    let html = '';
+    for (const role of roles) {
+      const items = byRole.filter(d => d.role === role).slice(0, 4);
+      html += `<div style="margin-bottom:1.25rem;">
+        <div style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);">${role}</div>
+        ${items.map((d, i) => `
+          <div class="bar-row" style="margin-bottom:.4rem;">
+            <div class="bar-label">${d.skill_name}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(d.frequency/items[0].frequency)*100}%;background:${COLORS[i]}"></div></div>
+            <div class="bar-val">${d.frequency}</div>
+          </div>`).join('')}
+      </div>`;
+    }
+    document.getElementById('skillsByRoleWrap').innerHTML = html;
+  } catch(e) { console.warn('Skills by role:', e); }
+}
+
+// ── API STATUS ─────────────────────────────────────────────────
+async function checkAPI() {
+  try {
+    await get('/');
+    document.getElementById('apiDot').classList.add('live');
+    document.getElementById('apiLabel').textContent = 'API Live';
+    document.getElementById('apiLabel').style.color = 'var(--accent)';
+  } catch {
+    document.getElementById('apiLabel').textContent = 'API Offline';
+    document.getElementById('apiLabel').style.color = 'var(--danger)';
+  }
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+checkAPI();
+loadSkillStats();
+
+// Scroll animations
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity='1'; e.target.style.transform='none'; } });
+}, { threshold: 0.06 });
+document.querySelectorAll('.anim').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

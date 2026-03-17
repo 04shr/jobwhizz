@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JobWhiz Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">◈ Job<span>Whiz</span> Lab</div>
+  <ul class="nav-links">
+    <li><a onclick="showPage('home')"      id="nav-home"      class="active">Home</a></li>
+    <li><a onclick="showPage('dashboard')" id="nav-dashboard">Dashboard</a></li>
+   <li><a href="eda.html" id="nav-eda">EDA</a></li>
+    <li><a href="nlp.html"  id="nav-nlp">NLP</a></li>
+<li><a href="sml.html"  id="nav-sml">SML</a></li>
+<li><a href="dss.html"  id="nav-dss">DSS</a></li>
+  </ul>
+  <div class="api-status">
+    <div class="api-dot" id="apiDot"></div>
+    <span id="apiLabel" style="color:var(--muted)">Connecting...</span>
+  </div>
+</nav>
+
+<!-- ── HOME ──────────────────────────────────────────────────── -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-badge">◈ JOBWHIZ LAB — LIVE DATA</div>
+    <h1>Decode the<br/><em>Job Market</em><br/>with Data</h1>
+    <p class="hero-sub">Real-time job market intelligence. ETL pipelines, NLP skill extraction, ML salary prediction, and A/B experimentation.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary btn-lg" onclick="showPage('dashboard')">Explore Dashboard →</button>
+      <button class="btn btn-ghost btn-lg"   onclick="showPage('nlp')">Try NLP Demo</button>
+    </div>
+  </div>
+  <div class="live-stats">
+    <div class="stat-card"><div class="stat-num" id="hs-jobs">—</div><div class="stat-label">JOBS INDEXED</div></div>
+    <div class="stat-card"><div class="stat-num" id="hs-companies">—</div><div class="stat-label">COMPANIES</div></div>
+    <div class="stat-card"><div class="stat-num" id="hs-cities">—</div><div class="stat-label">CITIES</div></div>
+    <div class="stat-card"><div class="stat-num" id="hs-salary">—</div><div class="stat-label">AVG SALARY (LPA)</div></div>
+  </div>
+  <div style="max-width:1100px;margin:0 auto;padding:4rem 2.5rem 2rem;">
+    <div style="font-family:var(--font-mono);font-size:.68rem;color:var(--accent);letter-spacing:.1em;margin-bottom:2rem;">WHAT EACH PAGE DOES</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;" id="feature-grid"></div>
+  </div>
+  <footer><span>◈ JobWhiz Lab</span><span id="footer-count">Loading...</span></footer>
+</div>
+
+<!-- ── DASHBOARD ─────────────────────────────────────────────── -->
+<div class="page" id="page-dashboard">
+  <div class="page-hero">
+    <div class="page-hero-meta">DASHBOARD · LIVE DATA</div>
+    <h2>Market Intelligence</h2>
+    <p>Real job data from MySQL — updated every ETL run.</p>
+  </div>
+  <div class="page-body">
+    <div class="kpi-row" id="dash-kpis"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+    <div class="chart-grid">
+      <div class="chart-card"><h3>Top Skills in Demand</h3><div class="bar-chart" id="dash-skills"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+      <div class="chart-card"><h3>Jobs by City</h3><div class="bar-chart" id="dash-cities"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+      <div class="chart-card" style="grid-column:1/-1;"><h3>Salary Distribution</h3><canvas id="salaryChart" height="80"></canvas></div>
+    </div>
+  </div>
+  <footer><span>Dashboard · Live MySQL</span></footer>
+</div>
+
+<!-- ── EDA ───────────────────────────────────────────────────── -->
+<div class="page" id="page-eda">
+  <div class="page-hero">
+    <div class="page-hero-meta">EDA · EXPLORATORY DATA ANALYSIS</div>
+    <h2>Explore the Dataset</h2>
+    <p>Every chart here is a SQL query running on your real database.</p>
+  </div>
+  <div class="page-body">
+    <div class="kpi-row" id="eda-stats"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+    <div class="chart-grid">
+      <div class="chart-card" style="grid-column:1/-1;"><h3>Skill Frequency</h3><div class="bar-chart" id="eda-skills"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+      <div class="chart-card"><h3>Avg Salary by City</h3><div class="bar-chart" id="eda-salary-city"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+      <div class="chart-card"><h3>Experience vs Salary</h3><canvas id="expSalaryChart" height="200"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>All Jobs</h3>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Title</th><th>Company</th><th>City</th><th>Salary</th><th>Type</th><th>Posted</th></tr></thead>
+          <tbody id="jobs-tbody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <footer><span>EDA · Live MySQL</span></footer>
+</div>
+
+<!-- ── NLP ───────────────────────────────────────────────────── -->
+<div class="page" id="page-nlp">
+  <div class="page-hero">
+    <div class="page-hero-meta">NLP · NATURAL LANGUAGE PROCESSING</div>
+    <h2>Skill Extraction</h2>
+    <p>Paste any job description — extract structured skills from unstructured text.</p>
+  </div>
+  <div class="page-body">
+    <div class="nlp-demo">
+      <div class="nlp-box">
+        <label>Paste a job description</label>
+        <textarea id="jdInput" placeholder="e.g. We need a Data Analyst with Python, SQL, Power BI..."></textarea>
+        <button class="btn btn-primary" style="margin-top:1rem;width:100%;padding:.65rem;" onclick="extractSkills()">Extract Skills →</button>
+      </div>
+      <div class="nlp-box">
+        <label>Extracted Skills</label>
+        <div id="skillOutput" style="min-height:80px;"><p style="font-family:var(--font-mono);font-size:.72rem;color:var(--muted);">Skills appear here...</p></div>
+        <label style="margin-top:1.25rem;">Detected Role</label>
+        <div id="roleOutput"><p style="font-family:var(--font-mono);font-size:.72rem;color:var(--muted);">Role appears here...</p></div>
+      </div>
+    </div>
+    <div class="chart-card"><h3>Most In-Demand Skills — Live from DB</h3><div class="bar-chart" id="nlp-skills"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+  </div>
+  <footer><span>NLP · Groq API in next phase</span></footer>
+</div>
+
+<!-- ── SML ───────────────────────────────────────────────────── -->
+<div class="page" id="page-sml">
+  <div class="page-hero">
+    <div class="page-hero-meta">SML · MACHINE LEARNING</div>
+    <h2>Salary Prediction</h2>
+    <p>Predict salary from skills, experience and location using real market data.</p>
+  </div>
+  <div class="page-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+      <div>
+        <div class="ml-form">
+          <div class="field"><label>Primary Skill</label><select id="mlSkill"><option>Python</option><option>SQL</option><option>Power BI</option><option>Tableau</option><option>Machine Learning</option><option>Spark</option></select></div>
+          <div class="field"><label>Experience: <span id="expVal">2</span> years</label><input type="range" id="mlExp" min="0" max="10" value="2" oninput="document.getElementById('expVal').textContent=this.value"/></div>
+          <div class="field"><label>Location</label><select id="mlLoc"><option>Bangalore</option><option>Mumbai</option><option>Delhi NCR</option><option>Hyderabad</option><option>Pune</option><option>Chennai</option></select></div>
+          <div class="field"><label>Role</label><select id="mlRole"><option>Data Analyst</option><option>Data Scientist</option><option>Data Engineer</option><option>BI Analyst</option></select></div>
+          <button class="btn btn-primary btn-lg" style="width:100%" onclick="predictSalary()">Predict Salary →</button>
+        </div>
+        <div class="pred-result" id="predResult">
+          <div style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);margin-bottom:.5rem;">PREDICTED SALARY</div>
+          <div class="pred-val" id="predValue">₹0 LPA</div>
+          <div style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);margin-top:.5rem;" id="predRange"></div>
+        </div>
+      </div>
+      <div class="chart-card"><h3>Avg Salary by City — Real Data</h3><div class="bar-chart" id="sml-salary-city"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+    </div>
+    <div class="chart-card"><h3>Salary by Role — Real Data</h3><div class="bar-chart" id="sml-salary-title"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+  </div>
+  <footer><span>SML · scikit-learn in next phase</span></footer>
+</div>
+
+<!-- ── A/B TESTING ───────────────────────────────────────────── -->
+<div class="page" id="page-ab">
+  <div class="page-hero">
+    <div class="page-hero-meta">A/B TESTING · EXPERIMENTATION</div>
+    <h2>Experiment Results</h2>
+    <p>Controlled experiments with statistical significance — how data teams ship features.</p>
+  </div>
+  <div class="page-body">
+    <div class="ab-grid">
+      <div class="variant-card a">
+        <div class="variant-label">VARIANT A — Generic</div>
+        <div class="metric-row"><span class="metric-key">Users</span><span class="metric-val">2,100</span></div>
+        <div class="metric-row"><span class="metric-key">Click-through</span><span class="metric-val">12.4%</span></div>
+        <div class="metric-row"><span class="metric-key">Session time</span><span class="metric-val">2m 14s</span></div>
+        <div class="metric-row"><span class="metric-key">Conversion</span><span class="metric-val">3.1%</span></div>
+        <div class="metric-row"><span class="metric-key">Bounce rate</span><span class="metric-val">48%</span></div>
+      </div>
+      <div class="variant-card b">
+        <div class="variant-label">VARIANT B — Personalised 🏆</div>
+        <div class="metric-row"><span class="metric-key">Users</span><span class="metric-val">2,100</span></div>
+        <div class="metric-row"><span class="metric-key">Click-through</span><span class="metric-val win">18.7% ↑</span></div>
+        <div class="metric-row"><span class="metric-key">Session time</span><span class="metric-val win">3m 42s ↑</span></div>
+        <div class="metric-row"><span class="metric-key">Conversion</span><span class="metric-val win">5.8% ↑</span></div>
+        <div class="metric-row"><span class="metric-key">Bounce rate</span><span class="metric-val win">31% ↓</span></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:1.5rem;">
+      <h3>Statistical Significance</h3>
+      <div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:.75rem;"><div style="height:100%;width:94%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:6px;"></div></div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.7rem;color:var(--muted);"><span>0%</span><span style="color:var(--accent)">94% confidence · p=0.006 · Variant B wins ✓</span><span>100%</span></div>
+    </div>
+    <div class="chart-card"><h3>Metrics Comparison</h3><canvas id="abChart" height="80"></canvas></div>
+  </div>
+  <footer><span>A/B Testing · Google Analytics in next phase</span></footer>
+</div>
+
+<!-- ── SCRIPTS (type=module for ES imports) ───────────────────── -->
+<script type="module">
+  import { initAPIStatus, showPage, renderBar } from './js/router.js';
+  import { loadDashboard }                      from './js/dashboard.js';
+  import { loadEDA }                            from './js/eda.js';
+  import { loadNLP, extractSkills }             from './js/nlp.js';
+  import { loadSML, predictSalary }             from './js/sml.js';
+
+  // Expose to HTML onclick handlers
+  window.showPage     = (name) => {
+    showPage(name);
+    if (name === 'dashboard') loadDashboard();
+    if (name === 'eda')       loadEDA();
+    if (name === 'nlp')       loadNLP();
+    if (name === 'sml')       loadSML();
+  };
+  window.extractSkills = extractSkills;
+  window.predictSalary = predictSalary;
+
+  // Feature cards
+  const FEATURES = [
+    { icon:'📊', title:'Dashboard',  desc:'KPIs, salary distribution, top skills — live from MySQL.',        tag:'Business Intelligence', page:'dashboard' },
+    { icon:'🔍', title:'EDA',        desc:'Histograms, frequency charts, correlation. Raw data made visual.', tag:'Statistics · Pandas',    page:'eda'       },
+    { icon:'🤖', title:'NLP',        desc:'Paste any job description — AI extracts skills instantly.',        tag:'NLP · Skill Extraction', page:'nlp'       },
+    { icon:'🎯', title:'SML',        desc:'Predict salary from your skills, experience and location.',        tag:'scikit-learn · Regression', page:'sml'    },
+    { icon:'⚗️', title:'A/B Testing',desc:'Product experiments evaluated with statistical significance.',    tag:'Experimentation',        page:'ab'        },
+  ];
+  document.getElementById('feature-grid').innerHTML = FEATURES.map(f => `
+    <div onclick="showPage('${f.page}')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.75rem;cursor:pointer;transition:all .2s;"
+         onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
+         onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
+      <div style="font-size:1.5rem;margin-bottom:1rem;">${f.icon}</div>
+      <h3 style="font-family:var(--font-head);font-size:1rem;font-weight:700;margin-bottom:.5rem;">${f.title}</h3>
+      <p style="font-size:.82rem;color:var(--muted);line-height:1.6;">${f.desc}</p>
+      <span style="display:inline-block;margin-top:1rem;font-family:var(--font-mono);font-size:.62rem;padding:.2rem .6rem;border-radius:4px;background:rgba(0,229,160,.08);color:var(--accent);border:1px solid rgba(0,229,160,.2);">${f.tag}</span>
+    </div>`).join('');
+
+  // A/B chart (static, no API needed)
+  new Chart(document.getElementById('abChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Click Rate (%)', 'Session (min)', 'Conversion (%)'],
+      datasets: [
+        { label:'Variant A', data:[12.4,2.2,3.1], backgroundColor:'rgba(79,139,255,.5)',  borderColor:'#4f8bff', borderWidth:1, borderRadius:4 },
+        { label:'Variant B', data:[18.7,3.7,5.8], backgroundColor:'rgba(0,229,160,.5)',   borderColor:'#00e5a0', borderWidth:1, borderRadius:4 }
+      ]
+    },
+    options: {
+      plugins: { legend: { labels: { color:'#5a6075', font:{ family:'DM Mono', size:11 } } } },
+      scales: {
+        x: { ticks:{ color:'#5a6075', font:{ family:'DM Mono', size:11 } }, grid:{ color:'#1e2230' } },
+        y: { ticks:{ color:'#5a6075', font:{ family:'DM Mono', size:11 } }, grid:{ color:'#1e2230' } }
+      }
+    }
+  });
+
+  // Boot
+  initAPIStatus();
+</script>
+</body>
+</html>
