@@ -50,9 +50,6 @@ export function extractSkills() {
     `<span class="skill-chip" style="background:rgba(79,139,255,.1);border-color:rgba(79,139,255,.3);color:var(--accent2)">🏷 ${detectedRole}</span>`;
 }
 
-const API = 'https://jobwhizz.onrender.com';
-
-export default API;
 
 // ── STATE ──────────────────────────────────────────────────────
 let resumeText    = '';

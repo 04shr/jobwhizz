@@ -1,7 +1,7 @@
 // ─── dashboard.js ─────────────────────────────────────────────
 import { getDashKPIs, getTopSkills, getJobsByCity, getSalaryDist } from './api.js';
 import { renderBar } from './router.js';
-import { checkHealth, API } from './api.js';
+import { checkHealth } from './api.js';
 ``
 let salaryChartInst = null;
 

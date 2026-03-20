@@ -1,5 +1,5 @@
 // ─── router.js — Page routing & shared UI helpers ─────────────
-import { checkHealth, getDashKPIs, API } from './api.js';
+import { checkHealth, getDashKPIs } from './api.js';
 // ── Page routing ──────────────────────────────────────────────
 export function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));

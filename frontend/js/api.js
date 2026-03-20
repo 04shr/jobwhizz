@@ -1,4 +1,5 @@
 // ─── api.js — All fetch calls in one place ────────────────────
+export const API = "https://jobwhizz.onrender.com";
 
 export async function apiFetch(endpoint) {
   const r = await fetch(API + endpoint);
@@ -58,4 +59,3 @@ export const getJobs = (city = '', role = '', limit = 50) => {
 // ── Skills ────────────────────────────────────────────────────
 export const getTopSkills = (limit = 15) => apiFetch(`/api/skills/top?limit=${limit}`);
 
-export const API = "https://jobwhizz.onrender.com";
