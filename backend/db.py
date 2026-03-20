@@ -13,13 +13,12 @@ def get_ssl_config():
     ca_content = os.getenv("DB_SSL_CA")
 
     if ca_content:
-        ca_content = ca_content.replace("\\n", "\n")
-        temp = tempfile.NamedTemporaryFile(delete=False)
-        temp.write(ca_content.encode())
-        temp.close()
-        return {"ca": temp.name}
-    else:
-        return {"ca": "ca.pem"}  # local fallback
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        tmp.write(ca_content.encode())
+        tmp.close()
+        return {"ca": tmp.name}
+
+    return None
 
 def get_db():
     return pymysql.connect(
@@ -30,7 +29,7 @@ def get_db():
         database=os.getenv("DB_NAME"),
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=False,
-        ssl={"ca": "ca.pem"}
+        ssl=get_ssl_config()
     )
 
 
