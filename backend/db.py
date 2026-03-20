@@ -12,15 +12,14 @@ import tempfile
 def get_ssl_config():
     ca_content = os.getenv("DB_SSL_CA")
 
-    if not ca_content:
-        raise Exception("DB_SSL_CA not set in environment variables")
-
-    # Create temporary CA file (required by PyMySQL)
-    temp = tempfile.NamedTemporaryFile(delete=False)
-    temp.write(ca_content.encode())
-    temp.close()
-
-    return {"ca": temp.name}
+    if ca_content:
+        ca_content = ca_content.replace("\\n", "\n")
+        temp = tempfile.NamedTemporaryFile(delete=False)
+        temp.write(ca_content.encode())
+        temp.close()
+        return {"ca": temp.name}
+    else:
+        return {"ca": "ca.pem"}  # local fallback
 
 def get_db():
     return pymysql.connect(
@@ -31,7 +30,7 @@ def get_db():
         database=os.getenv("DB_NAME"),
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=False,
-        ssl=get_ssl_config()
+        ssl={"ca": "ca.pem"}
     )
 
 

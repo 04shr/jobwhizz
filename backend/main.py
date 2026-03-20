@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from db import query
 from etl import run_etl
+from fastapi.middleware.cors import CORSMiddleware
 
 # ── Import all route modules ──────────────────────────────────────
 import dashboard
@@ -36,12 +37,19 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
-app = FastAPI(title="JobWhiz Lab API", version="3.0", lifespan=lifespan)
-
+app = FastAPI(
+    title="JobWhiz Lab API",
+    version="3.0",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+        "http://192.168.1.9:5500"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

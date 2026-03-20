@@ -31,14 +31,14 @@ ADZUNA_BASE    = "https://api.adzuna.com/v1/api"
 def get_ssl_config():
     ca_content = os.getenv("DB_SSL_CA")
 
-    if not ca_content:
-        raise Exception("DB_SSL_CA not set")
-
-    temp = tempfile.NamedTemporaryFile(delete=False)
-    temp.write(ca_content.encode())
-    temp.close()
-
-    return {"ca": temp.name}
+    if ca_content:
+        ca_content = ca_content.replace("\\n", "\n")
+        temp = tempfile.NamedTemporaryFile(delete=False)
+        temp.write(ca_content.encode())
+        temp.close()
+        return {"ca": temp.name}
+    else:
+        return {"ca": "ca.pem"}  # local fallback
 
 # ── DATABASE CONNECTION ───────────────────────────────────────────
 def get_db_connection():
@@ -50,7 +50,7 @@ def get_db_connection():
         database=os.getenv("DB_NAME"),
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=False,
-        ssl=get_ssl_config()
+        ssl={"ca": "ca.pem"}
     )
 
 
