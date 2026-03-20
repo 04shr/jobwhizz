@@ -7,19 +7,31 @@ import os
 import pymysql
 import pymysql.cursors
 from dotenv import load_dotenv
+import tempfile
 
-load_dotenv()
+def get_ssl_config():
+    ca_content = os.getenv("DB_SSL_CA")
 
+    if not ca_content:
+        raise Exception("DB_SSL_CA not set in environment variables")
+
+    # Create temporary CA file (required by PyMySQL)
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(ca_content.encode())
+    temp.close()
+
+    return {"ca": temp.name}
 
 def get_db():
     return pymysql.connect(
-        host=os.getenv("DB_HOST", "localhost"),
+        host=os.getenv("DB_HOST"),
         port=int(os.getenv("DB_PORT")),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "railway"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
         cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False
+        autocommit=False,
+        ssl=get_ssl_config()
     )
 
 

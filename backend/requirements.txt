@@ -7,3 +7,4 @@ pdfplumber
 apscheduler
 requests
 cryptography
+python-multipart

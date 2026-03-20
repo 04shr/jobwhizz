@@ -13,6 +13,7 @@ import pymysql
 import pymysql.cursors
 from datetime import datetime
 from dotenv import load_dotenv
+import tempfile
 
 load_dotenv()
 
@@ -27,17 +28,29 @@ ADZUNA_APP_ID  = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 ADZUNA_BASE    = "https://api.adzuna.com/v1/api"
 
+def get_ssl_config():
+    ca_content = os.getenv("DB_SSL_CA")
+
+    if not ca_content:
+        raise Exception("DB_SSL_CA not set")
+
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(ca_content.encode())
+    temp.close()
+
+    return {"ca": temp.name}
 
 # ── DATABASE CONNECTION ───────────────────────────────────────────
 def get_db_connection():
     return pymysql.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", 3306)),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "railway"),
+        host=os.getenv("DB_HOST"),
+        port=int(os.getenv("DB_PORT")),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
         cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False
+        autocommit=False,
+        ssl=get_ssl_config()
     )
 
 
