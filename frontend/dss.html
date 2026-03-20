@@ -366,18 +366,15 @@ footer{border-top:1px solid var(--border);padding:1.5rem 2.5rem;margin-top:4rem;
   <span>◈ JobWhiz Lab · Decision Support System</span>
   <span>Groq LLaMA3 · Live MySQL · Prescriptive Analytics</span>
 </footer>
-
 <script>
-// ── API BASE ─────────────────────────────────────────────────────
-// Always points to FastAPI (uvicorn on :8000).
-// Live Server on :5500 serves the HTML — that is separate from the API.
-const API = 'http://127.0.0.1:8000';
+const API = 'https://jobwhizz.onrender.com';
 
 async function get(ep) {
   const r = await fetch(API + ep);
   if (!r.ok) throw new Error(ep);
   return r.json();
 }
+
 async function post(ep, fd) {
   const r = await fetch(API + ep, { method:'POST', body:fd });
   if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'API error'); }

@@ -1,5 +1,5 @@
 // ─── sml.js — All SML logic, zero hardcoded values ───────────
-const API = 'http://127.0.0.1:8000';
+const API = "https://jobwhizz.onrender.com";
 
 // ── State — populated from API on boot ────────────────────────
 let STATS    = {};
@@ -494,3 +494,4 @@ if (document.getElementById('stat-strip')) {
     ]);
   })();
 }
+console.log("USING API:", API);

@@ -49,3 +49,4 @@ export async function loadDashboard() {
 
   } catch (e) { console.warn('Dashboard:', e); }
 }
+console.log("USING API:", API);

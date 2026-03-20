@@ -1,4 +1,4 @@
-const API = "http://127.0.0.1:8000";
+const API = "https://jobwhizz.onrender.com";
 
 async function get(ep){
   const r = await fetch(API + ep);
@@ -401,3 +401,5 @@ export async function loadEDA() {
     loadCities();
   }, 10000);
 }
+
+console.log("USING API:", API);

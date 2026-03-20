@@ -65,3 +65,5 @@ async function loadHomeStats() {
     set('footer-count', `${k.total_jobs} jobs · ${k.total_companies} companies · live`);
   } catch (e) { console.warn('Home stats:', e); }
 }
+
+console.log("USING API:", API);
