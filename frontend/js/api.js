@@ -1,5 +1,4 @@
 // ─── api.js — All fetch calls in one place ────────────────────
-import { checkHealth, getDashKPIs, API } from './api.js';
 
 export async function apiFetch(endpoint) {
   const r = await fetch(API + endpoint);
