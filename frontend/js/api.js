@@ -1,10 +1,21 @@
 // ─── api.js — All fetch calls in one place ────────────────────
+// api.js
 export const API = "https://jobwhizz.onrender.com";
 
-export async function apiFetch(endpoint) {
-  const r = await fetch(API + endpoint);
-  if (!r.ok) throw new Error(`API error: ${endpoint}`);
-  return r.json();
+export async function apiFetch(endpoint, retries = 3, delay = 1500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetch(API + endpoint);
+      if (!r.ok) throw new Error(`API error ${r.status}: ${endpoint}`);
+      return r.json();
+    } catch (err) {
+      if (i < retries - 1) {
+        await new Promise(res => setTimeout(res, delay * (i + 1))); // 1.5s, 3s, 4.5s
+      } else {
+        throw err;
+      }
+    }
+  }
 }
 
 // ── Health ────────────────────────────────────────────────────
