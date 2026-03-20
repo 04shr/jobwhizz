@@ -1,10 +1,5 @@
-import { checkHealth, getDashKPIs, API } from './api.js';
-
-async function get(ep){
-  const r = await fetch(API + ep);
-  if(!r.ok) throw new Error(ep);
-  return r.json();
-}
+import { apiFetch, API } from './api.js';
+const get = (ep) => apiFetch(ep);
 
 /* ───────────────── BAR RENDERER ───────────────── */
 

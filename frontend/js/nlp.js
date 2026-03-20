@@ -1,7 +1,5 @@
-// ─── nlp.js ───────────────────────────────────────────────────
-import { getKeywordFreq } from './api.js';
-import { renderBar } from './router.js';
-import { checkHealth, getDashKPIs, API } from './api.js';
+import { getKeywordFreq } from './api.js';       // line 1
+import { checkHealth, getDashKPIs, API } from './api.js';  // line 3
 
 const KNOWN_SKILLS = [
   'python','r','scala','sql','mysql','postgresql','mongodb','snowflake',
