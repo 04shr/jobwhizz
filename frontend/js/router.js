@@ -1,6 +1,5 @@
 // ─── router.js — Page routing & shared UI helpers ─────────────
-import { checkHealth, getDashKPIs } from './api.js';
-
+import { checkHealth, getDashKPIs, API } from './api.js';
 // ── Page routing ──────────────────────────────────────────────
 export function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -66,4 +65,3 @@ async function loadHomeStats() {
   } catch (e) { console.warn('Home stats:', e); }
 }
 
-console.log("USING API:", API);

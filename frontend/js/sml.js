@@ -1,6 +1,5 @@
 // ─── sml.js — All SML logic, zero hardcoded values ───────────
-const API = "https://jobwhizz.onrender.com";
-
+import { checkHealth, getDashKPIs, API } from './api.js';
 // ── State — populated from API on boot ────────────────────────
 let STATS    = {};
 let ROLE_MAP = {};
@@ -494,4 +493,3 @@ if (document.getElementById('stat-strip')) {
     ]);
   })();
 }
-console.log("USING API:", API);

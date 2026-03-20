@@ -1,7 +1,8 @@
 // ─── dashboard.js ─────────────────────────────────────────────
 import { getDashKPIs, getTopSkills, getJobsByCity, getSalaryDist } from './api.js';
 import { renderBar } from './router.js';
-
+import { checkHealth, API } from './api.js';
+``
 let salaryChartInst = null;
 
 export async function loadDashboard() {
@@ -49,4 +50,4 @@ export async function loadDashboard() {
 
   } catch (e) { console.warn('Dashboard:', e); }
 }
-console.log("USING API:", API);
+

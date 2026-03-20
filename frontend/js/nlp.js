@@ -1,6 +1,7 @@
 // ─── nlp.js ───────────────────────────────────────────────────
 import { getKeywordFreq } from './api.js';
 import { renderBar } from './router.js';
+import { checkHealth, getDashKPIs, API } from './api.js';
 
 const KNOWN_SKILLS = [
   'python','r','scala','sql','mysql','postgresql','mongodb','snowflake',
@@ -414,4 +415,3 @@ window.analyseResume = analyseResume;
 window.quickRetone = quickRetone;
 window.toggleLearn = toggleLearn;
 
-console.log("USING API:", API);

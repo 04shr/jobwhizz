@@ -1,4 +1,4 @@
-const API = "https://jobwhizz.onrender.com";
+import { checkHealth, getDashKPIs, API } from './api.js';
 
 async function get(ep){
   const r = await fetch(API + ep);
@@ -402,4 +402,3 @@ export async function loadEDA() {
   }, 10000);
 }
 
-console.log("USING API:", API);
