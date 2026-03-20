@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from db import query
 from etl import run_etl
-from fastapi.middleware.cors import CORSMiddleware
 
 # ── Import all route modules ──────────────────────────────────────
 import dashboard
@@ -49,7 +48,7 @@ app.add_middleware(
         "http://127.0.0.1:5500",
         "http://localhost:5500",
         "http://192.168.1.9:5500",
-        "https://jobwhizz.netlify.app/"
+        "https://jobwhizz.netlify.app"
 
     ],
     allow_credentials=True,
