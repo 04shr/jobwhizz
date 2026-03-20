@@ -50,7 +50,7 @@ def get_db_connection():
         database=os.getenv("DB_NAME"),
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=False,
-        ssl={"ca": "ca.pem"}
+        ssl=get_ssl_config() 
     )
 
 
